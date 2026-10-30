@@ -1,7 +1,7 @@
 # Python scripts for DevOps and DevSecOps
 
 Practical automation for the jobs that come up every week in operations. Every
-script uses only the Python standard library (3.9 or newer), so there is
+script uses only the Python standard library (3.10 or newer), so there is
 nothing to install, nothing to audit in a dependency tree, and it runs on any
 server that has Python.
 
@@ -41,7 +41,7 @@ backup.sh || WEBHOOK_URL=https://hooks.slack.com/... python3 scripts/webhook_not
 python3 -m unittest discover -s tests -v
 ```
 
-CI runs the tests on Python 3.9 and 3.13, and the secret scanner over the repository, on every pull request.
+CI runs the tests on Python 3.10 and 3.15, the oldest and newest supported releases, and the secret scanner over the repository, on every pull request.
 
 ## Security
 
