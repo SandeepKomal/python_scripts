@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="description" content="Common Python errors in automation scripts, each with the exact error text, its cause, how to confirm it, the fix and how to prevent it: ModuleNotFoundError, ImportError, error, ERROR, source, Activate.ps1 cannot be loaded because running scripts is disabled and more.">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Python errors and fixes for DevOps">
+  <meta property="og:description" content="37 common Python errors in automation, with cause, fix and prevention.">
+  <meta property="og:url" content="https://sandeepkomal.github.io/python_scripts/problems.html">
+  <link rel="canonical" href="https://sandeepkomal.github.io/python_scripts/problems.html">
+  <title>Python errors and fixes for DevOps</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+</head>
+<body>
+  <main class="wrap problems">
+    <p><a href="index.html">Python for DevOps</a></p>
+    <h1>Python errors and fixes for DevOps</h1>
+    <p class="lede">37 errors that automation scripts meet, each with the exact message, the cause, how to confirm it, the fix and how to prevent it. Generated from the site's troubleshooting reference.</p>
+    <nav class="card" aria-label="Problems">
+      <h2>Install and import</h2>
+      <ul>
+        <li><a href="#modulenotfound">ModuleNotFoundError: No module named 'requests'</a></li>
+        <li><a href="#importerror">ImportError: cannot import name 'x' from 'y'</a></li>
+        <li><a href="#pep668">error: externally-managed-environment</a></li>
+        <li><a href="#nomatch">ERROR: No matching distribution found</a></li>
+        <li><a href="#venvactivate">source: not found (activating a venv in cron or sh)</a></li>
+        <li><a href="#psscripts">Activate.ps1 cannot be loaded because running scripts is disabled</a></li>
+        <li><a href="#commandnotfound">python: command not found</a></li>
+        <li><a href="#urllib3ssl">TypeError: Retry.__init__() got an unexpected keyword argument</a></li>
+      </ul>
+      <h2>Syntax</h2>
+      <ul>
+        <li><a href="#indentexpected">IndentationError: expected an indented block</a></li>
+        <li><a href="#unexpectedindent">IndentationError: unexpected indent</a></li>
+        <li><a href="#taberror">TabError: inconsistent use of tabs and spaces</a></li>
+        <li><a href="#neverclosed">SyntaxError: '(' was never closed</a></li>
+      </ul>
+      <h2>Types and values</h2>
+      <ul>
+        <li><a href="#nonesub">TypeError: 'NoneType' object is not subscriptable</a></li>
+        <li><a href="#noneattr">AttributeError: 'NoneType' object has no attribute</a></li>
+        <li><a href="#keyerror">KeyError</a></li>
+        <li><a href="#indexerror">IndexError: list index out of range</a></li>
+        <li><a href="#valueint">ValueError: invalid literal for int() / could not convert string to float</a></li>
+        <li><a href="#naiveaware">TypeError: can't compare offset-naive and offset-aware datetimes</a></li>
+        <li><a href="#bytesstr">TypeError: a bytes-like object is required, not 'str'</a></li>
+        <li><a href="#notserializable">TypeError: Object of type datetime is not JSON serializable</a></li>
+        <li><a href="#recursion">RecursionError: maximum recursion depth exceeded</a></li>
+      </ul>
+      <h2>Files and encodings</h2>
+      <ul>
+        <li><a href="#unicodedecode">UnicodeDecodeError: 'utf-8' codec can't decode byte</a></li>
+        <li><a href="#filenotfound">FileNotFoundError: [Errno 2] No such file or directory</a></li>
+        <li><a href="#permission">PermissionError: [Errno 13] Permission denied</a></li>
+        <li><a href="#toomanyfiles">OSError: [Errno 24] Too many open files</a></li>
+        <li><a href="#killed">Killed (exit status 137)</a></li>
+      </ul>
+      <h2>Network and APIs</h2>
+      <ul>
+        <li><a href="#connrefused">ConnectionRefusedError: [Errno 111] Connection refused</a></li>
+        <li><a href="#sslverify">SSLError: CERTIFICATE_VERIFY_FAILED</a></li>
+        <li><a href="#readtimeout">ReadTimeout / TimeoutError: timed out</a></li>
+        <li><a href="#jsondecode">JSONDecodeError: Expecting value: line 1 column 1 (char 0)</a></li>
+        <li><a href="#gaierror">socket.gaierror: [Errno -2] Name or service not known</a></li>
+        <li><a href="#http429">429 Too Many Requests</a></li>
+      </ul>
+      <h2>Processes and runtime</h2>
+      <ul>
+        <li><a href="#calledprocess">CalledProcessError: returned non-zero exit status</a></li>
+        <li><a href="#subprocessnotfound">FileNotFoundError: No such file or directory: 'kubectl'</a></li>
+        <li><a href="#timeoutexpired">subprocess.TimeoutExpired</a></li>
+        <li><a href="#neverawaited">RuntimeWarning: coroutine was never awaited</a></li>
+        <li><a href="#distutilsgone">ModuleNotFoundError: No module named 'distutils'</a></li>
+      </ul>
+    </nav>
+    <section class="card fix" id="modulenotfound">
+      <h2>ModuleNotFoundError: No module named 'requests'</h2>
+      <pre class="err-text"><code>ModuleNotFoundError: No module named 'requests'</code></pre>
+      <h3>Symptom</h3>
+      <p>Works in your terminal, fails under cron, systemd, sudo or CI; or fails right after creating a new venv.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>A different interpreter runs the script than the one you installed into (system python3 instead of the venv)</li>
+        <li>The package was never installed in this environment</li>
+        <li>The import name differs from the package name (yaml is PyYAML)</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 -c 'import sys; print(sys.executable)'
+python3 -m pip show requests
+head -1 script.py   # which interpreter the shebang names</code></pre>
+      <h3>Fix</h3>
+      <p>Run the script with the environment's own interpreter (<code>/opt/app/.venv/bin/python script.py</code>), or install the package into the interpreter that runs it with <code>python -m pip install</code>.</p>
+      <h3>Prevent</h3>
+      <p>One venv per application, a pinned requirements.txt, and absolute interpreter paths in crontabs and unit files.</p>
+      <p>Practise it: <a href="index.html#play/cronvenv">Cron uses the wrong Python</a>, <a href="index.html#play/pkgname">No matching distribution for yaml</a>. Interactive version: <a href="index.html#fix/modulenotfound">#fix/modulenotfound</a>.</p>
+    </section>
+    <section class="card fix" id="importerror">
+      <h2>ImportError: cannot import name 'x' from 'y'</h2>
+      <pre class="err-text"><code>ImportError: cannot import name 'Retry' from 'requests.packages.urllib3' (unknown location)</code></pre>
+      <h3>Symptom</h3>
+      <p>An import that used to work fails after a dependency upgrade, or a module imports itself.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>The name moved or was removed in a new major version</li>
+        <li>A local file shadows the library (a json.py or requests.py next to your script)</li>
+        <li>A circular import between two of your modules</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 -c 'import y; print(y.__file__, getattr(y, &quot;__version__&quot;, &quot;?&quot;))'
+ls *.py   # anything named like the library?
+pip index versions y</code></pre>
+      <h3>Fix</h3>
+      <p>Import from the library's current location, or pin the version your code was written for; rename local files that shadow libraries.</p>
+      <h3>Prevent</h3>
+      <p>Pin dependencies, read changelogs before major upgrades, and never name your files after modules.</p>
+      <p>Practise it: <a href="index.html#play/pinning">An unpinned dependency breaks the deploy</a>. Interactive version: <a href="index.html#fix/importerror">#fix/importerror</a>.</p>
+    </section>
+    <section class="card fix" id="pep668">
+      <h2>error: externally-managed-environment</h2>
+      <pre class="err-text"><code>error: externally-managed-environment
+
+× This environment is externally managed</code></pre>
+      <h3>Symptom</h3>
+      <p>pip install (also with --user or sudo) is refused on a current Debian, Ubuntu or Fedora system.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>The system Python's packages belong to the OS package manager (PEP 668)</li>
+        <li>pip would overwrite files apt or dnf installed</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>ls /usr/lib/python3*/EXTERNALLY-MANAGED
+python3 -m pip --version</code></pre>
+      <h3>Fix</h3>
+      <p>Create a venv and use its pip and python: <code>python3 -m venv .venv &amp;&amp; .venv/bin/pip install -r requirements.txt</code>. For command-line tools, <code>pipx install &lt;tool&gt;</code>. Use apt for OS-wide Python packages.</p>
+      <h3>Prevent</h3>
+      <p>Never install into the system Python; avoid --break-system-packages.</p>
+      <p>Practise it: <a href="index.html#play/pep668">externally-managed-environment</a>. Interactive version: <a href="index.html#fix/pep668">#fix/pep668</a>.</p>
+    </section>
+    <section class="card fix" id="nomatch">
+      <h2>ERROR: No matching distribution found</h2>
+      <pre class="err-text"><code>ERROR: Could not find a version that satisfies the requirement yaml==6.0.2 (from versions: none)
+ERROR: No matching distribution found for yaml==6.0.2</code></pre>
+      <h3>Symptom</h3>
+      <p>pip install fails for one line of requirements.txt.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>The distribution has another name on PyPI (yaml is PyYAML, cv2 is opencv-python)</li>
+        <li>The pinned version does not exist, or has no wheel for this Python version or platform</li>
+        <li>A private index or proxy is not configured</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>pip index versions PyYAML
+python3 -V; pip debug --verbose | head</code></pre>
+      <h3>Fix</h3>
+      <p>Use the PyPI distribution name and a version that exists for your Python.</p>
+      <h3>Prevent</h3>
+      <p>Generate requirements with pip freeze from a working venv.</p>
+      <p>Practise it: <a href="index.html#play/pkgname">No matching distribution for yaml</a>. Interactive version: <a href="index.html#fix/nomatch">#fix/nomatch</a>.</p>
+    </section>
+    <section class="card fix" id="venvactivate">
+      <h2>source: not found (activating a venv in cron or sh)</h2>
+      <pre class="err-text"><code>/bin/sh: 1: source: not found</code></pre>
+      <h3>Symptom</h3>
+      <p>A crontab line or sh script that activates a virtual environment fails, or the venv is not used.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>cron and many CI steps run /bin/sh (dash), which has no <code>source</code></li>
+        <li>Activation only changes PATH for the current shell; it is never needed in automation</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>ls -l /bin/sh
+/opt/app/.venv/bin/python -c 'import sys; print(sys.prefix)'</code></pre>
+      <h3>Fix</h3>
+      <p>Do not activate: call <code>/opt/app/.venv/bin/python script.py</code> directly. In sh, <code>.</code> (dot) is the POSIX spelling of source.</p>
+      <h3>Prevent</h3>
+      <p>Use absolute venv interpreter paths in crontabs, systemd units and CI steps.</p>
+      <p>Practise it: <a href="index.html#play/cronvenv">Cron uses the wrong Python</a>. Interactive version: <a href="index.html#fix/venvactivate">#fix/venvactivate</a>.</p>
+    </section>
+    <section class="card fix" id="psscripts">
+      <h2>Activate.ps1 cannot be loaded because running scripts is disabled</h2>
+      <pre class="err-text"><code>.venv\Scripts\Activate.ps1 cannot be loaded because running scripts is disabled on this system.</code></pre>
+      <h3>Symptom</h3>
+      <p>On Windows PowerShell, activating a venv fails with an execution policy error.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>PowerShell's execution policy blocks unsigned scripts by default</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>Get-ExecutionPolicy -List</code></pre>
+      <h3>Fix</h3>
+      <p>Allow local scripts for your user: <code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code>, or skip activation and run <code>.venv\Scripts\python.exe script.py</code>.</p>
+      <h3>Prevent</h3>
+      <p>Document the venv's python.exe path for Windows build agents.</p>
+      <p>Interactive version: <a href="index.html#fix/psscripts">#fix/psscripts</a>.</p>
+    </section>
+    <section class="card fix" id="commandnotfound">
+      <h2>python: command not found</h2>
+      <pre class="err-text"><code>bash: python: command not found</code></pre>
+      <h3>Symptom</h3>
+      <p>Scripts or instructions that call <code>python</code> fail on a new server.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>Current Linux distributions ship python3 only; <code>python</code> is optional</li>
+        <li>PATH under cron or sudo is shorter than your shell's</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>command -v python3 python
+echo $PATH</code></pre>
+      <h3>Fix</h3>
+      <p>Call python3 (or the venv's bin/python). On Debian and Ubuntu, <code>apt install python-is-python3</code> adds the <code>python</code> name if you need it.</p>
+      <h3>Prevent</h3>
+      <p>Use <code>#!/usr/bin/env python3</code> shebangs and absolute paths in automation.</p>
+      <p>Practise it: <a href="index.html#play/cronpath">No such file: 'kubectl'</a>. Interactive version: <a href="index.html#fix/commandnotfound">#fix/commandnotfound</a>.</p>
+    </section>
+    <section class="card fix" id="urllib3ssl">
+      <h2>TypeError: Retry.__init__() got an unexpected keyword argument</h2>
+      <pre class="err-text"><code>TypeError: Retry.__init__() got an unexpected keyword argument 'method_whitelist'</code></pre>
+      <h3>Symptom</h3>
+      <p>The code did not change, but a fresh deploy fails at start-up.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>An unpinned transitive dependency (urllib3) moved to a new major version that removed the argument</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>pip freeze | grep -i urllib3
+pip show requests | grep Requires</code></pre>
+      <h3>Fix</h3>
+      <p>Pin every package to the versions you tested (pip freeze), then update the code to the new API (allowed_methods) in its own change.</p>
+      <h3>Prevent</h3>
+      <p>Lock all dependencies, including transitive ones, and upgrade on purpose with tests.</p>
+      <p>Practise it: <a href="index.html#play/pinning">An unpinned dependency breaks the deploy</a>. Interactive version: <a href="index.html#fix/urllib3ssl">#fix/urllib3ssl</a>.</p>
+    </section>
+    <section class="card fix" id="indentexpected">
+      <h2>IndentationError: expected an indented block</h2>
+      <pre class="err-text"><code>IndentationError: expected an indented block after 'if' statement on line 11</code></pre>
+      <h3>Symptom</h3>
+      <p>The script fails before running anything; the error names a line after a colon.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>The body of an if, for, def, with or try is not indented further than its header</li>
+        <li>An editor mixed in a different indentation</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 -m py_compile script.py
+cat -A script.py | sed -n '9,14p'   # shows tabs as ^I</code></pre>
+      <h3>Fix</h3>
+      <p>Indent the block by four spaces more than its header line.</p>
+      <h3>Prevent</h3>
+      <p>Configure your editor for four spaces, and run py_compile or a linter in CI.</p>
+      <p>Practise it: <a href="index.html#play/indent">IndentationError</a>. Interactive version: <a href="index.html#fix/indentexpected">#fix/indentexpected</a>.</p>
+    </section>
+    <section class="card fix" id="unexpectedindent">
+      <h2>IndentationError: unexpected indent</h2>
+      <pre class="err-text"><code>IndentationError: unexpected indent</code></pre>
+      <h3>Symptom</h3>
+      <p>A pasted or edited line breaks the whole file.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>A line is indented more than the block it belongs to</li>
+        <li>Code pasted from a chat or web page brought extra leading spaces</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 -m py_compile script.py</code></pre>
+      <h3>Fix</h3>
+      <p>Align the line with the other statements of its block.</p>
+      <h3>Prevent</h3>
+      <p>Format with a formatter and check syntax in CI.</p>
+      <p>Practise it: <a href="index.html#play/indent">IndentationError</a>. Interactive version: <a href="index.html#fix/unexpectedindent">#fix/unexpectedindent</a>.</p>
+    </section>
+    <section class="card fix" id="taberror">
+      <h2>TabError: inconsistent use of tabs and spaces</h2>
+      <pre class="err-text"><code>TabError: inconsistent use of tabs and spaces in indentation</code></pre>
+      <h3>Symptom</h3>
+      <p>Lines that look aligned are rejected.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>Some lines are indented with tabs and others with spaces</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>grep -nP '^\t' script.py</code></pre>
+      <h3>Fix</h3>
+      <p>Replace tabs with four spaces throughout (<code>expand -t 4</code>), or let your editor convert them.</p>
+      <h3>Prevent</h3>
+      <p>An .editorconfig with indent_style = space for *.py.</p>
+      <p>Practise it: <a href="index.html#play/indent">IndentationError</a>. Interactive version: <a href="index.html#fix/taberror">#fix/taberror</a>.</p>
+    </section>
+    <section class="card fix" id="neverclosed">
+      <h2>SyntaxError: '(' was never closed</h2>
+      <pre class="err-text"><code>SyntaxError: '(' was never closed</code></pre>
+      <h3>Symptom</h3>
+      <p>Python points at an opening bracket, often lines above the real mistake.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>A missing closing bracket or quote in a long call</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 -m py_compile script.py</code></pre>
+      <h3>Fix</h3>
+      <p>Close the bracket Python points at; check the lines after it for the missing one.</p>
+      <h3>Prevent</h3>
+      <p>Keep calls short, one argument per line for long ones, and an editor that matches brackets.</p>
+      <p>Interactive version: <a href="index.html#fix/neverclosed">#fix/neverclosed</a>.</p>
+    </section>
+    <section class="card fix" id="nonesub">
+      <h2>TypeError: 'NoneType' object is not subscriptable</h2>
+      <pre class="err-text"><code>TypeError: 'NoneType' object is not subscriptable</code></pre>
+      <h3>Symptom</h3>
+      <p>A crash on <code>x[...]</code> for some inputs only.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>A function returned None (it found nothing, or reached its end without return)</li>
+        <li>A dict .get() returned None for a missing key</li>
+        <li>An in-place method (list.sort, dict.update) was assigned: they return None</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>print(repr(x)) just before the line
+Read the function: every path should return something</code></pre>
+      <h3>Fix</h3>
+      <p>Check for None where you call the function (<code>if host is None:</code>), report it, and continue or exit.</p>
+      <h3>Prevent</h3>
+      <p>Return explicit values, or raise a clear exception when nothing is found.</p>
+      <p>Practise it: <a href="index.html#play/none">'NoneType' object is not subscriptable</a>. Interactive version: <a href="index.html#fix/nonesub">#fix/nonesub</a>.</p>
+    </section>
+    <section class="card fix" id="noneattr">
+      <h2>AttributeError: 'NoneType' object has no attribute</h2>
+      <pre class="err-text"><code>AttributeError: 'NoneType' object has no attribute 'append'</code></pre>
+      <h3>Symptom</h3>
+      <p>A method call on a variable fails because it is None.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>A default of None that is never replaced</li>
+        <li>re.match() or .get() returned None</li>
+        <li>An assignment from a method that returns None</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>print(repr(x))
+python3 -X dev script.py</code></pre>
+      <h3>Fix</h3>
+      <p>Create the value when it is None (<code>if tags is None: tags = []</code>), or check the match before using it.</p>
+      <h3>Prevent</h3>
+      <p>Use None as the default for mutable arguments, and handle the no-match case of every search.</p>
+      <p>Practise it: <a href="index.html#play/mutable">Tags leak between hosts</a>. Interactive version: <a href="index.html#fix/noneattr">#fix/noneattr</a>.</p>
+    </section>
+    <section class="card fix" id="keyerror">
+      <h2>KeyError</h2>
+      <pre class="err-text"><code>KeyError: 'email'</code></pre>
+      <h3>Symptom</h3>
+      <p>A dict lookup fails for some records, or an environment variable is missing.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>An optional field is absent from some records</li>
+        <li>os.environ['X'] for a variable that is not set (cron and CI have few)</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 -c &quot;import json; print([u for u in json.load(open('users.json')) if 'email' not in u][:3])&quot;
+env | sort</code></pre>
+      <h3>Fix</h3>
+      <p>Use .get(key, default) for optional keys; for required settings, fail early with a clear message.</p>
+      <h3>Prevent</h3>
+      <p>Validate input at the edge; document which keys and variables are required.</p>
+      <p>Practise it: <a href="index.html#play/keyerror">KeyError on optional data</a>. Interactive version: <a href="index.html#fix/keyerror">#fix/keyerror</a>.</p>
+    </section>
+    <section class="card fix" id="indexerror">
+      <h2>IndexError: list index out of range</h2>
+      <pre class="err-text"><code>IndexError: list index out of range</code></pre>
+      <h3>Symptom</h3>
+      <p>Crashes on an empty line, a short record, or a missing command-line argument.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>sys.argv[1] with no argument</li>
+        <li>line.split()[n] on an empty or truncated line</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>print(len(fields), repr(line))</code></pre>
+      <h3>Fix</h3>
+      <p>Use argparse for arguments; for records, catch (ValueError, IndexError) per line and count the skipped ones.</p>
+      <h3>Prevent</h3>
+      <p>Treat external input as untrusted; test with empty and truncated lines.</p>
+      <p>Practise it: <a href="index.html#play/badline">One bad line stops the report</a>. Interactive version: <a href="index.html#fix/indexerror">#fix/indexerror</a>.</p>
+    </section>
+    <section class="card fix" id="valueint">
+      <h2>ValueError: invalid literal for int() / could not convert string to float</h2>
+      <pre class="err-text"><code>ValueError: could not convert string to float: '/api/ca'</code></pre>
+      <h3>Symptom</h3>
+      <p>Parsing numbers from logs, CSV or the environment fails on one value.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>A truncated or malformed line</li>
+        <li>A unit or a comma in the value (&quot;80%&quot;, &quot;1,024&quot;)</li>
+        <li>A field split in the wrong place</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>grep -n -v -E '[0-9.]+$' access.log | head</code></pre>
+      <h3>Fix</h3>
+      <p>Validate and convert each value where you read it; skip and count bad records instead of stopping.</p>
+      <h3>Prevent</h3>
+      <p>Parse structured formats with their modules (csv, json), and log what was skipped.</p>
+      <p>Practise it: <a href="index.html#play/badline">One bad line stops the report</a>, <a href="index.html#play/csvsplit">too many values to unpack</a>. Interactive version: <a href="index.html#fix/valueint">#fix/valueint</a>.</p>
+    </section>
+    <section class="card fix" id="naiveaware">
+      <h2>TypeError: can't compare offset-naive and offset-aware datetimes</h2>
+      <pre class="err-text"><code>TypeError: can't subtract offset-naive and offset-aware datetimes</code></pre>
+      <h3>Symptom</h3>
+      <p>Date arithmetic fails between a time from an API and datetime.now().</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>datetime.now() and utcnow() are naive (no time zone); ISO times with +00:00 are aware</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 -c &quot;from datetime import datetime; print(datetime.now().tzinfo)&quot;</code></pre>
+      <h3>Fix</h3>
+      <p>Use aware times throughout: <code>datetime.now(timezone.utc)</code>; attach a zone to naive inputs with .replace(tzinfo=...) only when you know it.</p>
+      <h3>Prevent</h3>
+      <p>Store and compare in UTC; convert to local time only for display.</p>
+      <p>Practise it: <a href="index.html#play/tz">Naive and aware datetimes</a>. Interactive version: <a href="index.html#fix/naiveaware">#fix/naiveaware</a>.</p>
+    </section>
+    <section class="card fix" id="bytesstr">
+      <h2>TypeError: a bytes-like object is required, not 'str'</h2>
+      <pre class="err-text"><code>TypeError: a bytes-like object is required, not 'str'</code></pre>
+      <h3>Symptom</h3>
+      <p>Mixing subprocess output, sockets or binary files with text; or comparisons that are silently always False.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>subprocess.run without text=True returns bytes</li>
+        <li>A file opened in 'rb' mode</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>print(type(out), repr(out[:40]))</code></pre>
+      <h3>Fix</h3>
+      <p>Ask for text: <code>subprocess.run(..., capture_output=True, text=True)</code>, or decode once with .decode('utf-8').</p>
+      <h3>Prevent</h3>
+      <p>Decide at the edge whether data is bytes or text; never compare the two.</p>
+      <p>Practise it: <a href="index.html#play/bytes">The alert that never fires</a>. Interactive version: <a href="index.html#fix/bytesstr">#fix/bytesstr</a>.</p>
+    </section>
+    <section class="card fix" id="notserializable">
+      <h2>TypeError: Object of type datetime is not JSON serializable</h2>
+      <pre class="err-text"><code>TypeError: Object of type datetime is not JSON serializable</code></pre>
+      <h3>Symptom</h3>
+      <p>json.dump fails after a new field is added.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>JSON has no datetime, set, Decimal or Path type</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>print({k: type(v).__name__ for k, v in report.items()})</code></pre>
+      <h3>Fix</h3>
+      <p>Convert first: <code>.isoformat()</code> for datetimes, list() for sets, str() for paths; or <code>json.dumps(obj, default=str)</code>.</p>
+      <h3>Prevent</h3>
+      <p>Build report dicts from JSON-ready values; test the dump in CI.</p>
+      <p>Practise it: <a href="index.html#play/jsondump">Not JSON serializable</a>. Interactive version: <a href="index.html#fix/notserializable">#fix/notserializable</a>.</p>
+    </section>
+    <section class="card fix" id="recursion">
+      <h2>RecursionError: maximum recursion depth exceeded</h2>
+      <pre class="err-text"><code>RecursionError: maximum recursion depth exceeded</code></pre>
+      <h3>Symptom</h3>
+      <p>A recursive walk or a function that calls itself crashes after about a thousand levels.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>No base case, or one that is never reached</li>
+        <li>Following a cycle: symlinks, parent links, a property that calls itself</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>Read the repeated frame in the traceback: &quot;[Previous line repeated 996 more times]&quot;</code></pre>
+      <h3>Fix</h3>
+      <p>Fix the base case, or turn the recursion into a loop with an explicit stack; for trees use os.walk.</p>
+      <h3>Prevent</h3>
+      <p>Do not raise sys.setrecursionlimit to hide it; it moves the crash and can crash the interpreter.</p>
+      <p>Practise it: <a href="index.html#play/symlinks">Too many levels of symbolic links</a>. Interactive version: <a href="index.html#fix/recursion">#fix/recursion</a>.</p>
+    </section>
+    <section class="card fix" id="unicodedecode">
+      <h2>UnicodeDecodeError: 'utf-8' codec can't decode byte</h2>
+      <pre class="err-text"><code>UnicodeDecodeError: 'utf-8' codec can't decode byte 0xe9 in position 1832: invalid continuation byte</code></pre>
+      <h3>Symptom</h3>
+      <p>Reading a file from another system fails on the first accented character.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>The file is not UTF-8 (often Windows-1252 or Latin-1)</li>
+        <li>open() without encoding= uses the machine's locale</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>file -i customers_export.csv
+python3 -c &quot;print(open('customers_export.csv','rb').read()[1820:1840])&quot;</code></pre>
+      <h3>Fix</h3>
+      <p>Open with the encoding the file was written in: <code>open(path, encoding='cp1252')</code>.</p>
+      <h3>Prevent</h3>
+      <p>Always pass encoding=; agree on UTF-8 for exchange files. errors='ignore' only hides corrupted data.</p>
+      <p>Practise it: <a href="index.html#play/unicode">UnicodeDecodeError</a>. Interactive version: <a href="index.html#fix/unicodedecode">#fix/unicodedecode</a>.</p>
+    </section>
+    <section class="card fix" id="filenotfound">
+      <h2>FileNotFoundError: [Errno 2] No such file or directory</h2>
+      <pre class="err-text"><code>FileNotFoundError: [Errno 2] No such file or directory: 'config.json'</code></pre>
+      <h3>Symptom</h3>
+      <p>Works from the script's folder, fails from cron, systemd or CI.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>A relative path resolves against the current working directory, not the script</li>
+        <li>A missing parent directory</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 -c 'import os; print(os.getcwd())'
+ls -l &quot;$(dirname script.py)&quot;</code></pre>
+      <h3>Fix</h3>
+      <p>Anchor files that ship with the script to it: <code>Path(__file__).resolve().parent / 'config.json'</code>.</p>
+      <h3>Prevent</h3>
+      <p>Never rely on the working directory in scheduled jobs; pass paths as arguments.</p>
+      <p>Practise it: <a href="index.html#play/cwd">Works by hand, fails in cron</a>, <a href="index.html#play/pathjoin">Path glued together</a>. Interactive version: <a href="index.html#fix/filenotfound">#fix/filenotfound</a>.</p>
+    </section>
+    <section class="card fix" id="permission">
+      <h2>PermissionError: [Errno 13] Permission denied</h2>
+      <pre class="err-text"><code>PermissionError: [Errno 13] Permission denied: '/srv/archive2026-10-30.zip'</code></pre>
+      <h3>Symptom</h3>
+      <p>Writing or reading a file fails for the job's user.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>The path is not what you meant (a missing separator puts the file in the parent directory)</li>
+        <li>The job runs as a different user than in your test</li>
+        <li>The directory is owned by root</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>id; ls -ld /srv /srv/archive
+print(repr(path)) before the write</code></pre>
+      <h3>Fix</h3>
+      <p>Build paths with pathlib, and write where the job's user owns the directory.</p>
+      <h3>Prevent</h3>
+      <p>Run jobs as a dedicated user with its own directories; avoid sudo in scripts.</p>
+      <p>Practise it: <a href="index.html#play/pathjoin">Path glued together</a>. Interactive version: <a href="index.html#fix/permission">#fix/permission</a>.</p>
+    </section>
+    <section class="card fix" id="toomanyfiles">
+      <h2>OSError: [Errno 24] Too many open files</h2>
+      <pre class="err-text"><code>OSError: [Errno 24] Too many open files</code></pre>
+      <h3>Symptom</h3>
+      <p>A long run or a busy service fails after hours, opening files or sockets.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>Files or responses are opened and never closed</li>
+        <li>A connection per request without a session or pool</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>ls /proc/&lt;pid&gt;/fd | wc -l
+ulimit -n</code></pre>
+      <h3>Fix</h3>
+      <p>Open files and responses in with blocks; reuse a requests.Session.</p>
+      <h3>Prevent</h3>
+      <p>with for every resource; watch the open-file count in monitoring.</p>
+      <p>Practise it: <a href="index.html#play/flush">The empty report</a>. Interactive version: <a href="index.html#fix/toomanyfiles">#fix/toomanyfiles</a>.</p>
+    </section>
+    <section class="card fix" id="killed">
+      <h2>Killed (exit status 137)</h2>
+      <pre class="err-text"><code>Killed</code></pre>
+      <h3>Symptom</h3>
+      <p>The script stops with one word and exit status 137; no traceback.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>The kernel's out-of-memory killer: the process used too much memory</li>
+        <li>Reading a whole large file, or an unbounded cache</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>dmesg -T | grep -i -E 'killed process|out of memory'
+/usr/bin/time -v python3 script.py   # Maximum resident set size</code></pre>
+      <h3>Fix</h3>
+      <p>Stream input line by line, process in batches, and bound caches.</p>
+      <h3>Prevent</h3>
+      <p>Measure peak memory on realistic data before it reaches production.</p>
+      <p>Practise it: <a href="index.html#play/bigfile">Killed: the 10 GB log</a>, <a href="index.html#play/cache">Memory grows until the OOM killer</a>. Interactive version: <a href="index.html#fix/killed">#fix/killed</a>.</p>
+    </section>
+    <section class="card fix" id="connrefused">
+      <h2>ConnectionRefusedError: [Errno 111] Connection refused</h2>
+      <pre class="err-text"><code>requests.exceptions.ConnectionError: HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: / (Caused by NewConnectionError(&quot;HTTPConnection(host='127.0.0.1', port=8080): Failed to establish a new connection: [Errno 111] Connection refused&quot;))</code></pre>
+      <h3>Symptom</h3>
+      <p>The connection is rejected at once.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>Nothing listens on that host and port (service down, wrong port)</li>
+        <li>It listens on 127.0.0.1 only and you connect from elsewhere</li>
+        <li>A firewall rejecting with RST</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 scripts/port_check.py host:8080
+ss -ltnp | grep 8080   # on the server</code></pre>
+      <h3>Fix</h3>
+      <p>Start the service or use the right host and port; make it listen on the right interface.</p>
+      <h3>Prevent</h3>
+      <p>Health checks with port_check.py or http_monitor.py after every deploy.</p>
+      <p>Practise it: <a href="index.html#play/timeout">Hangs for ever</a>. Interactive version: <a href="index.html#fix/connrefused">#fix/connrefused</a>.</p>
+    </section>
+    <section class="card fix" id="sslverify">
+      <h2>SSLError: CERTIFICATE_VERIFY_FAILED</h2>
+      <pre class="err-text"><code>requests.exceptions.SSLError: ... [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1032)</code></pre>
+      <h3>Symptom</h3>
+      <p>HTTPS to an internal service fails, often only from Python.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>The server uses a private CA that requests (certifi) does not trust</li>
+        <li>The server does not send its intermediate certificate</li>
+        <li>An expired certificate, or a name mismatch</li>
+        <li>A TLS-inspecting proxy</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>openssl s_client -connect host:443 -servername host -showcerts &lt;/dev/null
+python3 scripts/cert_checker.py host:443</code></pre>
+      <h3>Fix</h3>
+      <p>Trust the right CA: <code>verify='/etc/ssl/certs/corp-root-ca.pem'</code> or REQUESTS_CA_BUNDLE; fix the server's chain if it is incomplete. Never verify=False.</p>
+      <h3>Prevent</h3>
+      <p>Distribute the company CA bundle to hosts and CI; monitor expiry with cert_checker.py.</p>
+      <p>Practise it: <a href="index.html#play/verify">CERTIFICATE_VERIFY_FAILED</a>. Interactive version: <a href="index.html#fix/sslverify">#fix/sslverify</a>.</p>
+    </section>
+    <section class="card fix" id="readtimeout">
+      <h2>ReadTimeout / TimeoutError: timed out</h2>
+      <pre class="err-text"><code>requests.exceptions.ReadTimeout: HTTPConnectionPool(host='status.internal', port=8080): Read timed out. (read timeout=10)</code></pre>
+      <h3>Symptom</h3>
+      <p>A request gives up after its timeout; or, with no timeout, the script hangs for ever.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>The server accepted the connection but answers slowly or not at all</li>
+        <li>A dropped connection with no RST, so only a timeout notices</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>curl -m 10 -sv http://status.internal:8080/api/health
+time python3 status_check.py</code></pre>
+      <h3>Fix</h3>
+      <p>Keep the timeout, catch requests.exceptions.RequestException, report the service as down, and exit non-zero; retry with backoff if it makes sense.</p>
+      <h3>Prevent</h3>
+      <p>A timeout on every network call: requests, urlopen, sockets and subprocess.</p>
+      <p>Practise it: <a href="index.html#play/timeout">Hangs for ever</a>, <a href="index.html#play/hang">One host hangs the whole run</a>. Interactive version: <a href="index.html#fix/readtimeout">#fix/readtimeout</a>.</p>
+    </section>
+    <section class="card fix" id="jsondecode">
+      <h2>JSONDecodeError: Expecting value: line 1 column 1 (char 0)</h2>
+      <pre class="err-text"><code>requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</code></pre>
+      <h3>Symptom</h3>
+      <p>Reading an API response as JSON fails, usually during an outage.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>The body is an HTML error page (502, 503) or empty</li>
+        <li>A login redirect returned HTML</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>curl -s -o /dev/null -w '%{http_code} %{content_type}\n' URL</code></pre>
+      <h3>Fix</h3>
+      <p>Call <code>resp.raise_for_status()</code> (or check status_code) before <code>resp.json()</code>.</p>
+      <h3>Prevent</h3>
+      <p>Never treat a failed call as an empty result; alert on the status.</p>
+      <p>Practise it: <a href="index.html#play/jsonhtml">JSONDecodeError on an error page</a>. Interactive version: <a href="index.html#fix/jsondecode">#fix/jsondecode</a>.</p>
+    </section>
+    <section class="card fix" id="gaierror">
+      <h2>socket.gaierror: [Errno -2] Name or service not known</h2>
+      <pre class="err-text"><code>socket.gaierror: [Errno -2] Name or service not known</code></pre>
+      <h3>Symptom</h3>
+      <p>A host name does not resolve from where the script runs.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>A typo, or an internal name used outside the network or VPN</li>
+        <li>DNS not configured in a container or CI runner</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>getent hosts db.internal
+cat /etc/resolv.conf</code></pre>
+      <h3>Fix</h3>
+      <p>Use a name that resolves where the script runs, or fix DNS for that environment.</p>
+      <h3>Prevent</h3>
+      <p>Read host names from configuration per environment.</p>
+      <p>Interactive version: <a href="index.html#fix/gaierror">#fix/gaierror</a>.</p>
+    </section>
+    <section class="card fix" id="http429">
+      <h2>429 Too Many Requests</h2>
+      <pre class="err-text"><code>requests.exceptions.HTTPError: 429 Client Error: Too Many Requests for url: https://config.internal/v1/hosts/self</code></pre>
+      <h3>Symptom</h3>
+      <p>An API starts refusing a script, or every client at once.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>Retries in a tight loop</li>
+        <li>Many hosts retrying in step after an outage</li>
+        <li>No pagination: re-fetching everything</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>Count requests per minute in the API's logs
+resp.headers.get('Retry-After')</code></pre>
+      <h3>Fix</h3>
+      <p>Limit attempts, back off exponentially with random jitter, and honour Retry-After.</p>
+      <h3>Prevent</h3>
+      <p>One shared retry helper with backoff and jitter for every API client.</p>
+      <p>Practise it: <a href="index.html#play/backoff">Retries take the API down</a>, <a href="index.html#play/pagination">Only the first 100</a>. Interactive version: <a href="index.html#fix/http429">#fix/http429</a>.</p>
+    </section>
+    <section class="card fix" id="calledprocess">
+      <h2>CalledProcessError: returned non-zero exit status</h2>
+      <pre class="err-text"><code>subprocess.CalledProcessError: Command '['pg_dump', '--format=custom', '--file', '/backups/shop-2026-10-30.dump', 'shop']' returned non-zero exit status 1.</code></pre>
+      <h3>Symptom</h3>
+      <p>A command the script runs failed, and check=True turned it into an exception. This is the good outcome.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>The command itself failed: read its stderr above the traceback</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>Run the exact command from the error in a shell
+subprocess.run(..., capture_output=True, text=True) and print .stderr</code></pre>
+      <h3>Fix</h3>
+      <p>Fix the command's cause; catch CalledProcessError only where you can do something useful, and exit non-zero otherwise.</p>
+      <h3>Prevent</h3>
+      <p>check=True on every subprocess.run, so failures are never silent.</p>
+      <p>Practise it: <a href="index.html#play/checktrue">Backup complete (it was not)</a>, <a href="index.html#play/futures">Lost exceptions in futures</a>. Interactive version: <a href="index.html#fix/calledprocess">#fix/calledprocess</a>.</p>
+    </section>
+    <section class="card fix" id="subprocessnotfound">
+      <h2>FileNotFoundError: No such file or directory: 'kubectl'</h2>
+      <pre class="err-text"><code>FileNotFoundError: [Errno 2] No such file or directory: 'kubectl'</code></pre>
+      <h3>Symptom</h3>
+      <p>subprocess cannot start a program that works in your shell.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>The program is not on PATH for this process (cron: /usr/bin:/bin)</li>
+        <li>A whole command line passed as one string without a shell</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>env -i PATH=/usr/bin:/bin sh -c 'command -v kubectl'
+print(args) before the call</code></pre>
+      <h3>Fix</h3>
+      <p>Use the absolute path (<code>/usr/local/bin/kubectl</code>), or set PATH where the job is defined; pass a list of arguments.</p>
+      <h3>Prevent</h3>
+      <p>Absolute paths to tools in scheduled scripts.</p>
+      <p>Practise it: <a href="index.html#play/cronpath">No such file: 'kubectl'</a>, <a href="index.html#play/shellinj">Shell injection</a>. Interactive version: <a href="index.html#fix/subprocessnotfound">#fix/subprocessnotfound</a>.</p>
+    </section>
+    <section class="card fix" id="timeoutexpired">
+      <h2>subprocess.TimeoutExpired</h2>
+      <pre class="err-text"><code>subprocess.TimeoutExpired: Command '['ssh', 'nfs-01', 'df', '-h', '/']' timed out after 30 seconds</code></pre>
+      <h3>Symptom</h3>
+      <p>A command took longer than its timeout and was killed.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>A stuck remote host or mount</li>
+        <li>A command waiting for input or a password prompt</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>Run the command by hand with `timeout 30`
+ssh -o BatchMode=yes host true</code></pre>
+      <h3>Fix</h3>
+      <p>Catch subprocess.TimeoutExpired per host, report it, and carry on with the others.</p>
+      <h3>Prevent</h3>
+      <p>A timeout on every command that touches the network; BatchMode for ssh.</p>
+      <p>Practise it: <a href="index.html#play/hang">One host hangs the whole run</a>. Interactive version: <a href="index.html#fix/timeoutexpired">#fix/timeoutexpired</a>.</p>
+    </section>
+    <section class="card fix" id="neverawaited">
+      <h2>RuntimeWarning: coroutine was never awaited</h2>
+      <pre class="err-text"><code>RuntimeWarning: coroutine 'sleep' was never awaited</code></pre>
+      <h3>Symptom</h3>
+      <p>An async call seems to do nothing.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>Calling a coroutine function without await only creates the coroutine</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 -X dev script.py</code></pre>
+      <h3>Fix</h3>
+      <p>Add await (await asyncio.sleep(1)), or schedule it with asyncio.create_task.</p>
+      <h3>Prevent</h3>
+      <p>Run asyncio code with -X dev in tests; it reports blocking calls and unawaited coroutines.</p>
+      <p>Practise it: <a href="index.html#play/asyncblock">time.sleep inside async code</a>. Interactive version: <a href="index.html#fix/neverawaited">#fix/neverawaited</a>.</p>
+    </section>
+    <section class="card fix" id="distutilsgone">
+      <h2>ModuleNotFoundError: No module named 'distutils'</h2>
+      <pre class="err-text"><code>ModuleNotFoundError: No module named 'distutils'</code></pre>
+      <h3>Symptom</h3>
+      <p>A script breaks after an OS or Python upgrade to 3.12 or later.</p>
+      <h3>Cause</h3>
+      <ul>
+        <li>distutils was removed from the standard library in Python 3.12 (PEP 632)</li>
+        <li>Other removals: imp, asynchat, asyncore, smtpd (3.12); cgi, crypt, telnetlib, pipes (3.13)</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 -V
+python3 -W error::DeprecationWarning script.py   # on the old version</code></pre>
+      <h3>Fix</h3>
+      <p>Replace the module: version comparison with tuples of ints or packaging.version; imp with importlib; pipes.quote with shlex.quote.</p>
+      <h3>Prevent</h3>
+      <p>Run tests with deprecation warnings as errors before upgrading.</p>
+      <p>Practise it: <a href="index.html#play/distutils">No module named 'distutils'</a>. Interactive version: <a href="index.html#fix/distutilsgone">#fix/distutilsgone</a>.</p>
+    </section>
+  </main>
+  <footer class="foot">
+    <div class="wrap foot-base">
+      <p>© 2024–2026 Sandeep Komal Pothu and contributors. Open source under the MIT License. No trackers, no cookies.</p>
+      <p class="foot-tm">Python® is a registered trademark of the Python Software Foundation. This project is independent and not affiliated with the PSF.</p>
+    </div>
+  </footer>
+</body>
+</html>

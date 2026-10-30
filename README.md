@@ -35,13 +35,23 @@ python3 scripts/disk_report.py /var --alert-percent 85
 backup.sh || WEBHOOK_URL=https://hooks.slack.com/... python3 scripts/webhook_notify.py "backup failed on $(hostname)" --level error
 ```
 
+## Learning site
+
+[`site/`](site) is **Python for DevOps**, a free static site published with GitHub Pages: a playground of 48 real automation incidents (scripts that hang, leak secrets, fail silently or break under cron), a fourteen-level path, a quiz, a Script X-ray that explains pasted Python and flags risky patterns, a troubleshooting reference for common Python errors (also as one plain page, [`problems.html`](site/problems.html)), a cheat sheet and an architecture page. It loads nothing from other sites and keeps progress only in your browser.
+
+```bash
+python3 -m http.server 8000 --directory site    # then open http://localhost:8000
+node tools/build-problems.js                    # after changing the troubleshooting data
+for t in check_site_data check_playground check_xray check_problems fuzz; do node site-tests/$t.js; done
+```
+
 ## Tests
 
 ```bash
 python3 -m unittest discover -s tests -v
 ```
 
-CI runs the tests on Python 3.10 and 3.15, the oldest and newest supported releases, and the secret scanner over the repository, on every pull request.
+CI runs the tests on Python 3.10 and 3.15, the oldest and newest supported releases, the secret scanner over the repository, and the site's Node tests and fuzzer, on every pull request.
 
 ## Security
 
