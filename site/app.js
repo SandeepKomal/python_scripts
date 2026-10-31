@@ -63,7 +63,10 @@
       page.classList.remove("tab-in");
       void page.offsetWidth; // restart the fade
       page.classList.add("tab-in");
-      document.querySelectorAll(".top nav a").forEach((a) => (a.dataset.tab === tab ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
+      const mode = [...document.querySelectorAll(".mode.fix a[data-tab]")].some((a) => a.dataset.tab === tab) ? "fix" : "learn";
+      document.documentElement.dataset.mode = mode;
+      document.querySelectorAll(".sw").forEach((a) => a.classList.contains(mode) ? a.setAttribute("aria-current", "true") : a.removeAttribute("aria-current"));
+      document.querySelectorAll(".subnav a").forEach((a) => (a.dataset.tab === tab ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
       if (!sub && want !== "play") window.scrollTo(0, 0);
     }
     current = tab;
