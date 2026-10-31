@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
-  <meta name="description" content="Python for DevOps: fix 48 real automation incidents in the browser, from hanging HTTP calls and shell injection to cron, venv and pip errors. Script X-ray, a troubleshooting reference for common Python errors, quizzes and nine tested scripts.">
+  <meta name="description" content="Python for DevOps: fix 53 real automation incidents in the browser, from hanging HTTP calls and shell injection to cron, venv, pip and boto3 errors. Script X-ray, a troubleshooting reference for Python and AWS SDK errors, quizzes, and tested scripts for servers, AWS and personal data.">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="DevOps Nimbus">
   <meta property="og:title" content="Python for DevOps, zero to on-call · DevOps Nimbus">
-  <meta property="og:description" content="Automation scripts that do not hang, leak secrets or fail silently. Practise on 48 real incidents, look up Python errors, and X-ray your own scripts.">
+  <meta property="og:description" content="Automation scripts that do not hang, leak secrets or fail silently. Practise on 53 real incidents, look up Python and boto3 errors, and X-ray your own scripts.">
   <meta property="og:url" content="https://sandeepkomal.github.io/python_scripts/">
   <link rel="canonical" href="https://sandeepkomal.github.io/python_scripts/">
   <title>Python for DevOps · DevOps Nimbus</title>
@@ -134,7 +134,7 @@
         </section>
 
         <h2 class="section-title" id="levels-title">Your path</h2>
-        <p class="section-sub">Fourteen levels, from running Python the right way to the night shift. Each one has a lab on your own machine and scenarios to practise.</p>
+        <p class="section-sub">Eighteen levels, from running Python the right way to the night shift, then AWS automation with boto3 and privacy engineering. Each one has a lab on your own machine and scenarios to practise.</p>
         <div class="progress-row">
           <div class="bar" role="progressbar" aria-label="Levels complete" aria-valuemin="0" aria-valuemax="14" id="bar"><span id="bar-fill"></span></div>
           <span id="bar-text"></span>
@@ -145,8 +145,8 @@
     </section>
 
     <section id="tab-scripts" class="tab wrap" hidden>
-      <h2>Nine scripts, tested and ready</h2>
-      <p class="lede">The repository's <code>scripts/</code>: standard library only, Python 3.10 or newer, <code>--help</code>, safe defaults and exit codes for cron and CI. The samples are real runs.</p>
+      <h2>Scripts, tested and ready</h2>
+      <p class="lede">The repository's <code>scripts/</code> need only Python 3.10 or newer; <code>scripts/aws/</code> adds boto3, pinned in <code>requirements-aws.txt</code>. Every one has <code>--help</code>, safe defaults (changes are dry runs until <code>--apply</code>), JSON output and exit codes for cron and CI, and never prints a secret or personal data. The samples are real runs; the AWS ones ran against botocore's Stubber, as in the tests.</p>
       <div id="scripts-list" class="scripts"></div>
     </section>
 
@@ -217,7 +217,7 @@
     <div class="wrap foot-grid">
       <div class="foot-brand">
         <a class="brand" href="#path"><img class="mark" src="nimbus.svg" alt="" width="47" height="28">DevOps Nimbus <span class="brand-track">Python for DevOps</span></a>
-        <p>Automation with the Python standard library: a playground of real incidents, a troubleshooting reference, quizzes and nine tested scripts. Free for everyone.</p>
+        <p>Automation with the Python standard library: a playground of real incidents, a troubleshooting reference, quizzes and tested scripts for servers, AWS and personal data. Free for everyone.</p>
         <a class="pill small-pill" href="https://github.com/SandeepKomal/python_scripts">GitHub source code</a>
       </div>
       <nav class="foot-col" aria-label="Learn">

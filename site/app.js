@@ -109,13 +109,13 @@
 
   function renderHome() {
     const n = window.PYPlayground ? window.PYPlayground.scenarios.length : 0;
-    $("#stats").replaceChildren(...[[String(n), "incidents to fix in the browser"], [String(Q.levels.length), "levels, basics to production"], [String(Q.scripts.length), "tested scripts, zero dependencies"]]
+    $("#stats").replaceChildren(...[[String(n), "incidents to fix in the browser"], [String(Q.levels.length), "levels, basics to production"], [String(Q.scripts.length), "tested scripts, for servers and AWS"]]
       .map(([b, s]) => h("div", null, h("b", null, b), h("span", null, s))));
     const tiles = [
       ["#play/indent", "Playground", "Fix real scripts, here.", `${n} incidents: hangs, injection, cron, pip, secrets, the GIL.`, "wide"],
       ["#cheats", "Cheat sheet", "subprocess, pathlib, venv.", "Recipes with a scenario to try each one.", "wide"],
       ["#xray", "Script X-ray", "Every line, explained.", "Risky patterns flagged."],
-      ["#scripts", "Scripts", "Nine, tested.", "Logs, health, certs, secrets."],
+      ["#scripts", "Scripts", `${Q.scripts.length}, tested.`, "Logs, certs, secrets, AWS, personal data."],
       ["#quiz", "Quiz", "Know why.", `${Object.values(window.TRACK_QUIZ).flat().length} questions.`],
       ["#arch", "How Python runs", "Interpreter to system calls.", "Venvs, pip, the GIL, threads, processes, asyncio.", "wide"],
       ["#fix", "Stuck on an error?", "Learn why it happens, then practise the fix.", `Paste a traceback. ${Q.doctor.length} errors, each with cause, fix and prevention.`, "wide"]
@@ -163,14 +163,15 @@
   // --- scripts --------------------------------------------------------------------
 
   function renderScripts() {
-    $("#scripts-list").replaceChildren(...Q.scripts.map((s) => h("article.card.script", { id: "script-" + s.file.replace(".py", "") },
+    const groups = [...new Set(Q.scripts.map((s) => s.group || "Standard library"))];
+    $("#scripts-list").replaceChildren(...groups.flatMap((g) => [h("h3.stage-name.script-group", null, g), ...Q.scripts.filter((s) => (s.group || "Standard library") === g).map((s) => h("article.card.script", { id: "script-" + s.file.replace(".py", "").replace(/\W/g, "-") },
       h("div.script-head", null, h("h3", null, s.title), h("a.mono.small", { href: `${Q.repo}/blob/main/scripts/${s.file}` }, "scripts/" + s.file)),
       h("p", null, s.what),
       h("h4", null, "Usage"),
       ...s.usage.map((u) => h("div.lab-cmd", null, h("code", null, u), copyButton(u))),
       h("h4", null, "A real run"),
       h("pre.sample", null, h("code", null, s.sample.join("\n"))),
-      h("p.small.muted", null, "Exit status: ", s.exit))));
+      h("p.small.muted", null, "Exit status: ", s.exit)))]));
   }
 
   // --- quiz -----------------------------------------------------------------------

@@ -197,6 +197,8 @@ kbd { font: 500 .72rem/1 "SF Mono", ui-monospace, Menlo, monospace; color: var(-
 
 /* Scripts */
 .scripts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.script-group { grid-column: 1 / -1; margin: 22px 0 -4px; }
+.script-group:first-child { margin-top: 0; }
 .script h3 { margin: 0; font-size: 1.3rem; }
 .script-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .script h4 { margin: 16px 0 6px; font-size: .85rem; color: var(--muted); }

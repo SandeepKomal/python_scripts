@@ -34,12 +34,15 @@ for (const d of Q.doctor) {
   assert.ok(Q.levels.some((l) => l.id === d.level), `${d.id}: level`);
 }
 for (const must of ["ModuleNotFoundError", "ImportError", "IndentationError", "NoneType", "KeyError", "UnicodeDecodeError", "PermissionError", "ConnectionRefusedError",
-  "CERTIFICATE_VERIFY_FAILED", "ReadTimeout", "JSONDecodeError", "RecursionError", "externally-managed-environment", "source: not found"]) {
+  "CERTIFICATE_VERIFY_FAILED", "ReadTimeout", "JSONDecodeError", "RecursionError", "externally-managed-environment", "source: not found",
+  "NoCredentialsError", "NoRegionError", "ExpiredToken", "InvalidClientTokenId", "SignatureDoesNotMatch", "AccessDenied", "UnauthorizedOperation", "Throttling",
+  "EndpointConnectionError", "ParamValidationError", "DryRunOperation", "Only the first page", "WaiterError", "Personal data in logs"]) {
   assert.ok(Q.doctor.some((d) => d.title.includes(must) || d.error.includes(must)), `troubleshoot covers ${must}`);
 }
 
-// The nine scripts page matches scripts/.
-assert.deepStrictEqual(Q.scripts.map((s) => s.file).sort(), fs.readdirSync(path.join(root, "scripts")).filter((f) => f.endsWith(".py")).sort(), "every script in scripts/ is on the page");
+// The scripts page matches scripts/ and scripts/aws/ (awskit.py is their shared module, not a script).
+const pyIn = (dir, prefix) => fs.readdirSync(path.join(root, dir)).filter((f) => f.endsWith(".py") && f !== "awskit.py").map((f) => prefix + f);
+assert.deepStrictEqual(Q.scripts.map((s) => s.file).sort(), [...pyIn("scripts", ""), ...pyIn("scripts/aws", "aws/")].sort(), "every script in scripts/ and scripts/aws/ is on the page");
 for (const s of Q.scripts) assert.ok(s.usage.length && s.sample.length && s.exit, `${s.file}: usage, sample and exit`);
 
 // Architecture: every component has its text.
