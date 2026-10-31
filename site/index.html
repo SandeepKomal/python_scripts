@@ -6,21 +6,22 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="description" content="Python for DevOps: fix 48 real automation incidents in the browser, from hanging HTTP calls and shell injection to cron, venv and pip errors. Script X-ray, a troubleshooting reference for common Python errors, quizzes and nine tested scripts.">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Python for DevOps">
+  <meta property="og:site_name" content="DevOps Nimbus">
+  <meta property="og:title" content="Python for DevOps, zero to on-call · DevOps Nimbus">
   <meta property="og:description" content="Automation scripts that do not hang, leak secrets or fail silently. Practise on 48 real incidents, look up Python errors, and X-ray your own scripts.">
   <meta property="og:url" content="https://sandeepkomal.github.io/python_scripts/">
   <link rel="canonical" href="https://sandeepkomal.github.io/python_scripts/">
-  <title>Python for DevOps</title>
+  <title>Python for DevOps · DevOps Nimbus</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
   <header class="top">
     <div class="wrap top-inner">
-      <a class="brand" href="#path" aria-label="Python for DevOps home">
-        <img src="logo.svg" alt="" width="22" height="22">
-        Python for DevOps
+      <a class="brand" href="#path" aria-label="DevOps Nimbus Python for DevOps, home">
+        <img class="mark" src="nimbus.svg" alt="" width="37" height="22">
+        DevOps Nimbus <span class="brand-track">Python for DevOps</span>
       </a>
       <nav aria-label="Sections">
         <div class="mode learn" role="group" aria-label="Learn">
@@ -29,7 +30,7 @@
           <a href="#scripts" data-tab="scripts">Scripts</a>
           <a href="#quiz" data-tab="quiz">Quiz</a>
           <a href="#xray" data-tab="xray">Script X-ray</a>
-          <a href="#arch" data-tab="arch">How Python runs</a>
+          <a href="#arch" data-tab="arch">How it runs</a>
         </div>
         <div class="mode fix" role="group" aria-label="Fix">
           <span class="mode-k">Fix</span>
@@ -38,7 +39,6 @@
         </div>
       </nav>
       <button type="button" class="kbd-btn" id="palette-open" aria-label="Search the site (Ctrl+K)"><span>Search</span><kbd id="palette-key">Ctrl K</kbd></button>
-      <a class="gh" id="gh-link" href="https://github.com/SandeepKomal/python_scripts">GitHub</a>
     </div>
   </header>
 
@@ -46,7 +46,7 @@
     <section id="tab-path" class="tab">
       <header class="hero">
         <div class="wrap">
-          <p class="eyebrow">Python for DevOps</p>
+          <p class="eyebrow"><img class="eyebrow-logo" src="logo.svg" alt="" width="20" height="20">Python for DevOps · zero to on-call</p>
           <h1>Automate the boring.<br>Safely.</h1>
           <p class="sub">Logs, APIs, files and alerts with the standard library: scripts that do not hang, leak secrets or fail silently.</p>
           <div class="doors">
@@ -68,6 +68,7 @@
           </div>
           <div class="stage" id="stage" aria-label="A live log analysis, as log_analyzer.py reports it"></div>
           <div class="stats" id="stats"></div>
+          <section class="engage" id="engage" aria-label="Your learning"></section>
         </div>
       </header>
 
@@ -209,7 +210,7 @@
   <footer class="foot">
     <div class="wrap foot-grid">
       <div class="foot-brand">
-        <a class="brand" href="#path"><img src="logo.svg" alt="" width="28" height="28">Python for DevOps</a>
+        <a class="brand" href="#path"><img class="mark" src="nimbus.svg" alt="" width="47" height="28">DevOps Nimbus <span class="brand-track">Python for DevOps</span></a>
         <p>Automation with the Python standard library: a playground of real incidents, a troubleshooting reference, quizzes and nine tested scripts. Free for everyone.</p>
         <a class="pill small-pill" href="https://github.com/SandeepKomal/python_scripts">GitHub source code</a>
       </div>
@@ -225,6 +226,7 @@
       </nav>
       <nav class="foot-col" aria-label="Project">
         <h2>Project</h2>
+        <a href="https://sandeepkomal.github.io/devops-nimbus/">All DevOps Nimbus tracks</a>
         <a href="https://github.com/SandeepKomal/python_scripts#readme">README</a>
         <a href="https://github.com/SandeepKomal/python_scripts/issues">Report an issue</a>
         <a href="problems.html">All problems, one page</a>
@@ -234,7 +236,7 @@
     <div class="wrap foot-base">
       <p>© 2024–2026 Sandeep Komal Pothu and contributors.</p>
       <p>Open source under the <a href="https://github.com/SandeepKomal/python_scripts/blob/main/LICENSE">MIT License</a>. No trackers, no cookies, nothing loaded from other sites.</p>
-      <p>Your progress (levels, quiz scores, solved scenarios, drafts) stays in this browser and is never sent anywhere. <button type="button" class="link-btn" id="forget">Clear it</button></p>
+      <p>Your progress (levels, quiz scores, solved scenarios, drafts, score, activity days) stays in this browser and is never sent anywhere. <button type="button" class="link-btn" id="forget">Clear it</button></p>
       <p class="foot-tm">Python® is a registered trademark of the Python Software Foundation. This project is independent and not affiliated with the PSF.</p>
     </div>
   </footer>
@@ -252,5 +254,6 @@
   <script src="playground.js"></script>
   <script src="xray.js"></script>
   <script src="architecture.js"></script>
+  <script src="engage.js"></script>
 </body>
 </html>

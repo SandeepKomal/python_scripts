@@ -1,7 +1,7 @@
 // Content for the Python for DevOps site. Plain data, no logic.
 "use strict";
 
-window.QUEST = {
+window.TRACK = {
   repo: "https://github.com/SandeepKomal/python_scripts",
   site: "https://sandeepkomal.github.io/python_scripts/",
 

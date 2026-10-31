@@ -9,7 +9,7 @@ const site = path.resolve(__dirname, "../site");
 function render() {
   global.window = globalThis;
   for (const f of ["data.js", "scenarios.js", "playground.js"]) require(path.join(site, f));
-  const Q = window.QUEST;
+  const Q = window.TRACK;
   const titles = Object.fromEntries(window.PYSim.SCENARIOS.map((s) => [s.id, s.title]));
   const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const rich = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
@@ -52,11 +52,11 @@ ${d.cause.map((c) => `        <li>${rich(c)}</li>`).join("\n")}
   <link rel="canonical" href="${Q.site}problems.html">
   <title>Python errors and fixes for DevOps</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
   <main class="wrap problems">
-    <p><a href="index.html">Python for DevOps</a></p>
+    <p><a href="index.html">DevOps Nimbus · Python for DevOps</a></p>
     <h1>Python errors and fixes for DevOps</h1>
     <p class="lede">${Q.doctor.length} errors that automation scripts meet, each with the exact message, why it happens, how to confirm it, the fix and how to prevent it. Then learn it for good: break and fix each one yourself in the <a href="index.html#pg">browser playground</a>. Generated from the site's troubleshooting reference.</p>
     <nav class="card" aria-label="Problems">

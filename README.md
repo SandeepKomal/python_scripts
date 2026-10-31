@@ -37,7 +37,7 @@ backup.sh || WEBHOOK_URL=https://hooks.slack.com/... python3 scripts/webhook_not
 
 ## Learning site
 
-[`site/`](site) is **Python for DevOps**, a free static site published with GitHub Pages: a playground of 48 real automation incidents (scripts that hang, leak secrets, fail silently or break under cron), a fourteen-level path, a quiz, a Script X-ray that explains pasted Python and flags risky patterns, a troubleshooting reference for common Python errors (also as one plain page, [`problems.html`](site/problems.html)), a cheat sheet and an architecture page. It loads nothing from other sites and keeps progress only in your browser.
+[`site/`](site) is **Python for DevOps**, a [DevOps Nimbus](https://sandeepkomal.github.io/devops-nimbus/) track: a free static site published with GitHub Pages with a playground of 48 real automation incidents (scripts that hang, leak secrets, fail silently or break under cron), a fourteen-level path, a quiz, a Script X-ray that explains pasted Python and flags risky patterns, a troubleshooting reference for common Python errors (also as one plain page, [`problems.html`](site/problems.html)), a cheat sheet and an architecture page. It loads nothing from other sites and keeps progress only in your browser.
 
 ```bash
 python3 -m http.server 8000 --directory site    # then open http://localhost:8000
