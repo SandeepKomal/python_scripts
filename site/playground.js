@@ -234,7 +234,8 @@
   // Names a script uses that need an import (or an assignment) first.
   const NAMES = ["Path", "time", "random", "shlex", "subprocess", "json", "logging", "sys", "os", "yaml", "csv", "re", "shutil", "ast", "asyncio",
     "ThreadPoolExecutor", "ProcessPoolExecutor", "as_completed", "concurrent", "timezone", "datetime", "requests", "urllib", "socket", "ssl",
-    "argparse", "pickle", "functools", "lru_cache", "sysconfig", "tempfile", "secrets", "hashlib", "itertools", "collections", "Counter", "gzip", "glob"];
+    "argparse", "pickle", "functools", "lru_cache", "sysconfig", "tempfile", "secrets", "hashlib", "itertools", "collections", "Counter", "gzip", "glob",
+    "boto3", "Config", "ClientError"];
   function undefinedName(py) {
     for (const name of NAMES) {
       const bound = new RegExp(`^\\s*(import\\s+([\\w.]+(\\s+as\\s+\\w+)?\\s*,\\s*)*${name}\\b(?!\\s+as)|from\\s+[\\w.]+\\s+import\\s+[^\\n]*\\b${name}\\b|import\\s+[\\w.]+\\s+as\\s+${name}\\b|(async\\s+)?def\\s+${name}\\b|class\\s+${name}\\b)|^\\s*${name}\\s*=[^=]|\\bfor\\s+${name}\\b|\\bas\\s+${name}\\b|\\bdef\\s+\\w+\\([^)]*\\b${name}\\b`, "m");

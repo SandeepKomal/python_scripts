@@ -7,7 +7,7 @@
   <meta name="description" content="Common Python errors in automation scripts, each with the exact error text, its cause, how to confirm it, the fix and how to prevent it: ModuleNotFoundError, ImportError, error, ERROR, source, Activate.ps1 cannot be loaded because running scripts is disabled and more.">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Python errors and fixes for DevOps">
-  <meta property="og:description" content="37 common Python errors in automation, with cause, fix and prevention.">
+  <meta property="og:description" content="52 common Python errors in automation, with cause, fix and prevention.">
   <meta property="og:url" content="https://sandeepkomal.github.io/python_scripts/problems.html">
   <link rel="canonical" href="https://sandeepkomal.github.io/python_scripts/problems.html">
   <title>Python errors and fixes for DevOps</title>
@@ -18,7 +18,7 @@
   <main class="wrap problems">
     <p><a href="index.html">DevOps Nimbus · Python for DevOps</a></p>
     <h1>Python errors and fixes for DevOps</h1>
-    <p class="lede">37 errors that automation scripts meet, each with the exact message, why it happens, how to confirm it, the fix and how to prevent it. Then learn it for good: break and fix each one yourself in the <a href="index.html#pg">browser playground</a>. Generated from the site's troubleshooting reference.</p>
+    <p class="lede">52 errors that automation scripts meet, each with the exact message, why it happens, how to confirm it, the fix and how to prevent it. Then learn it for good: break and fix each one yourself in the <a href="index.html#pg">browser playground</a>. Generated from the site's troubleshooting reference.</p>
     <nav class="card" aria-label="Problems">
       <h2>Install and import</h2>
       <ul>
@@ -74,6 +74,27 @@
         <li><a href="#timeoutexpired">subprocess.TimeoutExpired</a></li>
         <li><a href="#neverawaited">RuntimeWarning: coroutine was never awaited</a></li>
         <li><a href="#distutilsgone">ModuleNotFoundError: No module named 'distutils'</a></li>
+      </ul>
+      <h2>AWS and boto3</h2>
+      <ul>
+        <li><a href="#awsnocreds">NoCredentialsError: Unable to locate credentials</a></li>
+        <li><a href="#awsnoregion">NoRegionError: You must specify a region.</a></li>
+        <li><a href="#awsexpired">ExpiredToken: The security token included in the request is expired</a></li>
+        <li><a href="#awsbadkey">InvalidClientTokenId or SignatureDoesNotMatch</a></li>
+        <li><a href="#awsdenied">AccessDenied or UnauthorizedOperation</a></li>
+        <li><a href="#awsthrottle">Throttling: Rate exceeded (reached max retries)</a></li>
+        <li><a href="#awsendpoint">EndpointConnectionError: Could not connect to the endpoint URL</a></li>
+        <li><a href="#awsparam">ParamValidationError: Parameter validation failed</a></li>
+        <li><a href="#dryrunop">DryRunOperation: Request would have succeeded, but DryRun flag is set.</a></li>
+        <li><a href="#awspaging">Only the first page: exactly 1,000 S3 objects, or one page of a describe call</a></li>
+        <li><a href="#awswaiter">WaiterError: Waiter InstanceStopped failed: Max attempts exceeded</a></li>
+      </ul>
+      <h2>Personal data (DPDP)</h2>
+      <ul>
+        <li><a href="#piiinlogs">Personal data in logs: Aadhaar, phone numbers or emails in application output</a></li>
+        <li><a href="#unencryptedbackup">Unencrypted backups or snapshots of personal data</a></li>
+        <li><a href="#noretention">No retention limit: personal data kept for ever</a></li>
+        <li><a href="#prodtestdata">Production personal data copied into test or staging</a></li>
       </ul>
     </nav>
     <section class="card fix" id="modulenotfound">
@@ -774,6 +795,317 @@ python3 -W error::DeprecationWarning script.py   # on the old version</code></pr
       <h3>Prevent</h3>
       <p>Run tests with deprecation warnings as errors before upgrading.</p>
       <p><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/distutils">No module named 'distutils'</a>, then take <a href="index.html#path/13">Level 13 · Boss level: the night shift</a>. Interactive version: <a href="index.html#fix/distutilsgone">#fix/distutilsgone</a>.</p>
+    </section>
+    <section class="card fix" id="awsnocreds">
+      <h2>NoCredentialsError: Unable to locate credentials</h2>
+      <pre class="err-text"><code>botocore.exceptions.NoCredentialsError: Unable to locate credentials</code></pre>
+      <h3>Symptom</h3>
+      <p>A boto3 script works on your laptop and fails in cron, a container, CI or on a new server, before any request is sent.</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>Nothing in the credential chain is set for this process: no AWS_* variables, no profile in ~/.aws, no SSO session, no role</li>
+        <li>cron, systemd and sudo run with another HOME or a clean environment, so ~/.aws and your exported variables are not there</li>
+        <li>A container on EC2 cannot reach the instance metadata service: IMDSv2 with a hop limit of 1 stops one network hop short of the container</li>
+        <li>The task or pod has no role attached (ECS task role, EKS IRSA or Pod Identity)</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>aws configure list   # where each setting comes from; keys shown masked
+aws sts get-caller-identity
+env | grep -o '^AWS_[A-Z_]*'   # which AWS variables are set, without their values
+aws ec2 describe-instances --instance-ids &quot;$INSTANCE_ID&quot; --query 'Reservations[].Instances[].MetadataOptions'</code></pre>
+      <h3>Fix</h3>
+      <p>Give the process an identity the standard way: a role on the instance, task or pod (best), <code>--profile</code> or AWS_PROFILE with that user's HOME, or <code>aws sso login</code>. In containers on EC2, raise the IMDSv2 hop limit to 2. Never paste keys into the script.</p>
+      <h3>Prevent</h3>
+      <p>Run automation with roles, not long-lived keys; test a new job with the same user and environment cron will use; make credential errors exit 2 with one clear line (<code>awskit.run</code>).</p>
+      <p><strong>Now learn it:</strong> take <a href="index.html#path/14">Level 14 · boto3: credentials, regions and errors</a>. Interactive version: <a href="index.html#fix/awsnocreds">#fix/awsnocreds</a>.</p>
+    </section>
+    <section class="card fix" id="awsnoregion">
+      <h2>NoRegionError: You must specify a region.</h2>
+      <pre class="err-text"><code>botocore.exceptions.NoRegionError: You must specify a region.</code></pre>
+      <h3>Symptom</h3>
+      <p><code>boto3.client(&quot;ec2&quot;)</code> fails as soon as it is created, under cron or in a fresh container, but works in your shell.</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>No region_name in the code, and no AWS_REGION or AWS_DEFAULT_REGION in this environment</li>
+        <li>The region was exported in ~/.bashrc, which cron does not read</li>
+        <li>The profile in ~/.aws/config has no region line, or a different profile is used</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>aws configure get region
+env | grep -E '^AWS_(DEFAULT_)?REGION='
+python3 -c 'import boto3; print(boto3.Session().region_name)'</code></pre>
+      <h3>Fix</h3>
+      <p>Pass the region explicitly (<code>boto3.client(&quot;ec2&quot;, region_name=args.region)</code>), or set AWS_REGION where the job is defined. For every region, list them with <code>describe_regions</code> and create one client per region.</p>
+      <h3>Prevent</h3>
+      <p>Give every script a --region option (and --all-regions), and fail with exit 2 and a clear message when none is set.</p>
+      <p><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/awsregion">NoRegionError under cron</a>, then take <a href="index.html#path/14">Level 14 · boto3: credentials, regions and errors</a>. Interactive version: <a href="index.html#fix/awsnoregion">#fix/awsnoregion</a>.</p>
+    </section>
+    <section class="card fix" id="awsexpired">
+      <h2>ExpiredToken: The security token included in the request is expired</h2>
+      <pre class="err-text"><code>botocore.exceptions.ClientError: An error occurred (ExpiredToken) when calling the GetCallerIdentity operation: The security token included in the request is expired</code></pre>
+      <h3>Symptom</h3>
+      <p>A long job or a script run from an old terminal fails part-way through; the same command works after logging in again. SSO users may see <code>Error when retrieving token from sso: Token has expired and refresh failed</code>.</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>Temporary credentials (SSO, assume-role, MFA sessions) expire at the end of their session, often after an hour</li>
+        <li>Old AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN values left in the environment win over the refreshed profile</li>
+        <li>A job longer than the role's maximum session duration</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>aws sts get-caller-identity
+env | grep -o '^AWS_[A-Z_]*'
+aws configure list</code></pre>
+      <h3>Fix</h3>
+      <p>Refresh: <code>aws sso login --profile &lt;name&gt;</code>, or assume the role again; unset stale AWS_* variables so the profile is used. Profiles that assume a role (<code>role_arn</code> with <code>source_profile</code>) are refreshed by botocore automatically.</p>
+      <h3>Prevent</h3>
+      <p>Use profiles or instance roles instead of exported keys, so botocore refreshes them; split very long jobs or raise the role's maximum session duration.</p>
+      <p><strong>Now learn it:</strong> take <a href="index.html#path/14">Level 14 · boto3: credentials, regions and errors</a>. Interactive version: <a href="index.html#fix/awsexpired">#fix/awsexpired</a>.</p>
+    </section>
+    <section class="card fix" id="awsbadkey">
+      <h2>InvalidClientTokenId or SignatureDoesNotMatch</h2>
+      <pre class="err-text"><code>botocore.exceptions.ClientError: An error occurred (InvalidClientTokenId) when calling the GetCallerIdentity operation: The security token included in the request is invalid.</code></pre>
+      <h3>Symptom</h3>
+      <p>Every call fails at once, often right after rotating a key, copying credentials, or switching accounts. With SignatureDoesNotMatch: &quot;The request signature we calculated does not match the signature you provided. Check your AWS Secret Access Key and signing method.&quot;</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>InvalidClientTokenId: the access key was deleted or deactivated, belongs to another partition, or is a temporary (ASIA...) key used without its session token</li>
+        <li>SignatureDoesNotMatch: the secret key is wrong, or was copied with a space or a line break</li>
+        <li>Stale AWS_* variables in the environment override the profile you meant</li>
+        <li>The region is not enabled for the account (EC2 answers AuthFailure); a skewed clock gives &quot;Signature expired&quot; instead</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>aws configure list
+aws sts get-caller-identity
+aws iam list-access-keys --user-name &quot;$USER_NAME&quot;   # from a working identity: is the key Active?
+date -u   # compare with the real time</code></pre>
+      <h3>Fix</h3>
+      <p>Use one source of credentials: unset the AWS_* variables or fix the profile; replace a deleted key; pass the session token with temporary keys; sync the clock (chrony or systemd-timesyncd).</p>
+      <h3>Prevent</h3>
+      <p>Prefer roles and SSO to static keys; when a key must exist, rotate it with a check (<code>get-caller-identity</code>) before deleting the old one.</p>
+      <p><strong>Now learn it:</strong> take <a href="index.html#path/14">Level 14 · boto3: credentials, regions and errors</a>. Interactive version: <a href="index.html#fix/awsbadkey">#fix/awsbadkey</a>.</p>
+    </section>
+    <section class="card fix" id="awsdenied">
+      <h2>AccessDenied or UnauthorizedOperation</h2>
+      <pre class="err-text"><code>botocore.exceptions.ClientError: An error occurred (UnauthorizedOperation) when calling the StopInstances operation: You are not authorized to perform this operation. User: arn:aws:sts::111122223333:assumed-role/ops-scheduler/cron is not authorized to perform: ec2:StopInstances on resource: arn:aws:ec2:eu-west-1:111122223333:instance/i-0abc123 because no identity-based policy allows the ec2:StopInstances action. Encoded authorization failure message: ...</code></pre>
+      <h3>Symptom</h3>
+      <p>Credentials work (get-caller-identity succeeds), but one operation, one region or one resource is refused.</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>The identity's policies do not allow this action, or not on this resource or under this condition (a tag, a region)</li>
+        <li>A service control policy, a permission boundary or a session policy denies it</li>
+        <li>A resource policy denies it: an S3 bucket policy, a KMS key policy (encrypted volumes and buckets need key permissions too)</li>
+        <li>A different identity is used than you think</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>aws sts get-caller-identity
+aws sts decode-authorization-message --encoded-message &quot;$MSG&quot; --query DecodedMessage --output text   # EC2's encoded message
+aws iam simulate-principal-policy --policy-source-arn &quot;$ROLE_ARN&quot; --action-names ec2:StopInstances
+CloudTrail: the event's errorCode and errorMessage</code></pre>
+      <h3>Fix</h3>
+      <p>Grant exactly the missing action on the resources it needs (each script's header lists its minimum policy), or fix the SCP, boundary, bucket or key policy that denies it.</p>
+      <h3>Prevent</h3>
+      <p>Start from the documented least-privilege policy, dry-run (DryRun=True) before the run that matters, and handle one denied region without stopping the rest.</p>
+      <p><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/awsdryrun">A clean-up with no dry run</a>, then take <a href="index.html#path/14">Level 14 · boto3: credentials, regions and errors</a>. Interactive version: <a href="index.html#fix/awsdenied">#fix/awsdenied</a>.</p>
+    </section>
+    <section class="card fix" id="awsthrottle">
+      <h2>Throttling: Rate exceeded (reached max retries)</h2>
+      <pre class="err-text"><code>botocore.exceptions.ClientError: An error occurred (Throttling) when calling the GetMetricStatistics operation (reached max retries: 4): Rate exceeded</code></pre>
+      <h3>Symptom</h3>
+      <p>A script that calls AWS many times, often from a thread pool or several jobs at once, fails part-way. EC2 calls it RequestLimitExceeded, DynamoDB ProvisionedThroughputExceededException, S3 SlowDown.</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>Too many requests per second for the account, region and API: limits are shared by every job using them</li>
+        <li>The default (legacy) retry mode gives up after four retries</li>
+        <li>Many threads each retrying on their own make the burst worse</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>grep -c 'reached max retries' job.log
+CloudTrail: events with errorCode Throttling or RequestLimitExceeded at that time
+aws service-quotas list-service-quotas --service-code ec2 --query 'Quotas[].QuotaName' | head</code></pre>
+      <h3>Fix</h3>
+      <p>Create the client with <code>Config(retries={&quot;mode&quot;: &quot;adaptive&quot;, &quot;max_attempts&quot;: 10})</code>: exponential backoff with jitter, and adaptive mode also slows the client down when throttled. Share one client between threads and keep the pool small.</p>
+      <h3>Prevent</h3>
+      <p>Retries configured on every client, fewer and bigger calls (paginators, filters, batch APIs), and jobs spread out in time instead of all at minute 0.</p>
+      <p><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/awsretry">Throttling: reached max retries</a>, then take <a href="index.html#path/15">Level 15 · Inventory and audits at scale</a>. Interactive version: <a href="index.html#fix/awsthrottle">#fix/awsthrottle</a>.</p>
+    </section>
+    <section class="card fix" id="awsendpoint">
+      <h2>EndpointConnectionError: Could not connect to the endpoint URL</h2>
+      <pre class="err-text"><code>botocore.exceptions.EndpointConnectionError: Could not connect to the endpoint URL: &quot;https://ec2.eu-centrl-1.amazonaws.com/&quot;</code></pre>
+      <h3>Symptom</h3>
+      <p>Calls fail without any AWS error code, after a pause; sometimes only on one server or in one subnet.</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>A misspelt or non-existent region name (the host name does not resolve)</li>
+        <li>The server has no route to AWS: a private subnet with no NAT gateway and no VPC endpoint for that service</li>
+        <li>A proxy is required (HTTPS_PROXY) or is set but unreachable; a firewall blocks port 443</li>
+        <li>The service is not offered in that region</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 -c &quot;import socket; print(socket.getaddrinfo('ec2.eu-west-1.amazonaws.com', 443)[0][4])&quot;
+curl -sS -o /dev/null -w '%{http_code}\n' https://sts.eu-west-1.amazonaws.com/
+env | grep -i -o '^[a-z_]*proxy'</code></pre>
+      <h3>Fix</h3>
+      <p>Correct the region; add a NAT gateway or interface VPC endpoints for the services the job calls; set HTTPS_PROXY (and NO_PROXY for 169.254.169.254) where a proxy is required.</p>
+      <h3>Prevent</h3>
+      <p>Validate --region against <code>describe_regions</code>, set connect and read timeouts in Config, and test new subnets with a one-line <code>aws sts get-caller-identity</code>.</p>
+      <p><strong>Now learn it:</strong> take <a href="index.html#path/14">Level 14 · boto3: credentials, regions and errors</a>. Interactive version: <a href="index.html#fix/awsendpoint">#fix/awsendpoint</a>.</p>
+    </section>
+    <section class="card fix" id="awsparam">
+      <h2>ParamValidationError: Parameter validation failed</h2>
+      <pre class="err-text"><code>botocore.exceptions.ParamValidationError: Parameter validation failed:
+Invalid type for parameter MaxResults, value: 50, type: &lt;class 'str'&gt;, valid types: &lt;class 'int'&gt;</code></pre>
+      <h3>Symptom</h3>
+      <p>The call fails immediately, before anything is sent to AWS; nothing in CloudTrail.</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>A value from argparse or the environment is still a string where the API wants a number or a list</li>
+        <li>A required parameter is missing: <code>Missing required parameter in input: &quot;Bucket&quot;</code></li>
+        <li>A parameter name in Python style instead of the API's: <code>Unknown parameter in input: &quot;instance_ids&quot;, must be one of: InstanceIds, ...</code></li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 -c &quot;import boto3; m = boto3.client('ec2', region_name='eu-west-1').meta.service_model; print(list(m.operation_model('StopInstances').input_shape.members))&quot;
+aws ec2 stop-instances help</code></pre>
+      <h3>Fix</h3>
+      <p>Convert values once where you read them (<code>type=int</code> in argparse), use the API's exact parameter names (InstanceIds, not instance_ids), and pass lists where the API takes lists.</p>
+      <h3>Prevent</h3>
+      <p>Unit tests with botocore's Stubber: it validates every request against the API model, without the network.</p>
+      <p><strong>Now learn it:</strong> take <a href="index.html#path/15">Level 15 · Inventory and audits at scale</a>. Interactive version: <a href="index.html#fix/awsparam">#fix/awsparam</a>.</p>
+    </section>
+    <section class="card fix" id="dryrunop">
+      <h2>DryRunOperation: Request would have succeeded, but DryRun flag is set.</h2>
+      <pre class="err-text"><code>botocore.exceptions.ClientError: An error occurred (DryRunOperation) when calling the StopInstances operation: Request would have succeeded, but DryRun flag is set.</code></pre>
+      <h3>Symptom</h3>
+      <p>A script that passes DryRun=True to an EC2 call crashes with a traceback, although the message says the call would have worked.</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>EC2 answers every dry run with an error: DryRunOperation when the call would succeed, UnauthorizedOperation when it would be refused</li>
+        <li>The script calls with DryRun=True but does not catch ClientError</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>aws ec2 stop-instances --instance-ids &quot;$ID&quot; --dry-run   # the CLI prints the same message</code></pre>
+      <h3>Fix</h3>
+      <p>Catch ClientError and look at <code>e.response[&quot;Error&quot;][&quot;Code&quot;]</code>: DryRunOperation means it would succeed (report &quot;would stop&quot;); re-raise or report anything else.</p>
+      <h3>Prevent</h3>
+      <p>Keep one helper for it (<code>awskit.dry_run</code>), make the dry run the default and real changes need <code>--apply</code>.</p>
+      <p><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/awsdryrun">A clean-up with no dry run</a>, then take <a href="index.html#path/16">Level 16 · Changing AWS safely</a>. Interactive version: <a href="index.html#fix/dryrunop">#fix/dryrunop</a>.</p>
+    </section>
+    <section class="card fix" id="awspaging">
+      <h2>Only the first page: exactly 1,000 S3 objects, or one page of a describe call</h2>
+      <pre class="err-text"><code>checked 1000 objects, 12.7 GB   # the bucket holds 48,213</code></pre>
+      <h3>Symptom</h3>
+      <p>A report counts a suspiciously round number (1,000 objects, 50 or 100 items), or misses resources that the console shows. No error is raised.</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>List and describe calls return one page at a time; list_objects_v2 returns at most 1,000 keys per call</li>
+        <li>The script never follows NextToken, NextContinuationToken or Marker</li>
+        <li>Asking for a bigger page only works up to the API's cap</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>aws s3api list-objects-v2 --bucket &quot;$BUCKET&quot; --prefix orders/ --query 'length(Contents)'   # the CLI pages for you
+python3 -c &quot;import boto3; print(boto3.client('s3').can_paginate('list_objects_v2'))&quot;</code></pre>
+      <h3>Fix</h3>
+      <p>Use a paginator for every list call: <code>for page in client.get_paginator(&quot;list_objects_v2&quot;).paginate(Bucket=b): ...</code>, or <code>.search(&quot;Contents[]&quot;)</code> to get the items directly. Note <code>page.get(&quot;Contents&quot;, [])</code>: an empty page has no Contents key.</p>
+      <h3>Prevent</h3>
+      <p>Paginate by default, even where today's data fits in one page; test with Stubber responses that carry a NextToken.</p>
+      <p><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/awspager">Exactly 1,000 objects</a>, then take <a href="index.html#path/15">Level 15 · Inventory and audits at scale</a>. Interactive version: <a href="index.html#fix/awspaging">#fix/awspaging</a>.</p>
+    </section>
+    <section class="card fix" id="awswaiter">
+      <h2>WaiterError: Waiter InstanceStopped failed: Max attempts exceeded</h2>
+      <pre class="err-text"><code>botocore.exceptions.WaiterError: Waiter InstanceStopped failed: Max attempts exceeded</code></pre>
+      <h3>Symptom</h3>
+      <p>A script that waits for instances, snapshots or stacks fails after minutes of waiting; or with &quot;Waiter encountered a terminal failure state&quot; when the resource went somewhere it will never come back from.</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>The resource takes longer than the waiter's default (EC2 instance waiters poll every 15 seconds, 40 times: 10 minutes)</li>
+        <li>The resource is stuck (an instance stuck in stopping, a shutdown script that hangs)</li>
+        <li>It reached a failure state: the instance was terminated while you waited for running</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>aws ec2 describe-instances --instance-ids &quot;$ID&quot; --query 'Reservations[].Instances[].[State.Name,StateTransitionReason]'
+aws ec2 describe-instance-status --instance-ids &quot;$ID&quot; --include-all-instances</code></pre>
+      <h3>Fix</h3>
+      <p>Look at the resource before retrying; if it is just slow, pass <code>WaiterConfig={&quot;Delay&quot;: 15, &quot;MaxAttempts&quot;: 80}</code>; catch WaiterError and report which resource did not get there instead of crashing the whole run.</p>
+      <h3>Prevent</h3>
+      <p>Wait only when the next step needs it, set WaiterConfig deliberately, and treat a timeout as a finding to report.</p>
+      <p><strong>Now learn it:</strong> take <a href="index.html#path/16">Level 16 · Changing AWS safely</a>. Interactive version: <a href="index.html#fix/awswaiter">#fix/awswaiter</a>.</p>
+    </section>
+    <section class="card fix" id="piiinlogs">
+      <h2>Personal data in logs: Aadhaar, phone numbers or emails in application output</h2>
+      <pre class="err-text"><code>INFO verifying customer {'id': 'c-1042', 'name': 'Asha Rao', 'phone': '+91 9XXXXXXXXX', 'aadhaar': '...'}</code></pre>
+      <h3>Symptom</h3>
+      <p>The personal-data scanner finds Aadhaar, PAN, phone numbers or emails in logs, traces, error reports or a log platform outside the team's control.</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>Whole request bodies, records or exception locals are logged &quot;for debugging&quot;</li>
+        <li>Logs are copied to more systems (shipping, SIEM, support tickets) and kept longer than the data itself</li>
+        <li>Nobody owns a rule for what may be logged</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 scripts/pii_scanner.py /var/log/app/
+python3 scripts/pii_scanner.py --loose /var/log/app/ | tail -1   # also numbers without a context word</code></pre>
+      <h3>Fix</h3>
+      <p>Log identifiers, not records (<code>customer[&quot;id&quot;]</code>); mask at the source; redact what is already written (<code>log_redactor.py --apply</code> on rotated files) and purge copies in every log store. Treat a leak to an outside system as a possible breach and follow the incident runbook.</p>
+      <h3>Prevent</h3>
+      <p>A logging rule in code review, the scanner in CI over test output and sample logs, short log retention, and redaction in the log pipeline.</p>
+      <p><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/piilog">Aadhaar numbers in the log</a>, then take <a href="index.html#path/17">Level 17 · Personal data and India's DPDP Act</a>. Interactive version: <a href="index.html#fix/piiinlogs">#fix/piiinlogs</a>.</p>
+    </section>
+    <section class="card fix" id="unencryptedbackup">
+      <h2>Unencrypted backups or snapshots of personal data</h2>
+      <pre class="err-text"><code>FIX  arn:aws:rds:ap-south-1:111122223333:db:customers  - storage not encrypted</code></pre>
+      <h3>Symptom</h3>
+      <p>An audit finds an RDS instance, EBS volume, snapshot or bucket holding personal data without encryption at rest, or a database dump copied to a plain server or laptop.</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>The resource was created before encryption was the default, or from an unencrypted snapshot</li>
+        <li>Dumps and exports are made outside the managed backup and land wherever there is space</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 scripts/aws/pii_storage_audit.py --all-regions
+aws rds describe-db-instances --query 'DBInstances[].[DBInstanceIdentifier,StorageEncrypted]'
+aws ec2 get-ebs-encryption-by-default</code></pre>
+      <h3>Fix</h3>
+      <p>Encrypt by copying: an encrypted copy of the snapshot (<code>aws rds copy-db-snapshot --kms-key-id ...</code>), restore from it, switch over, then delete the unencrypted originals. Turn on EBS encryption by default in every region.</p>
+      <h3>Prevent</h3>
+      <p>Encryption by default, the storage audit in a scheduled job, and backups only through the managed, encrypted path with access logging.</p>
+      <p><strong>Now learn it:</strong> take <a href="index.html#path/17">Level 17 · Personal data and India's DPDP Act</a>. Interactive version: <a href="index.html#fix/unencryptedbackup">#fix/unencryptedbackup</a>.</p>
+    </section>
+    <section class="card fix" id="noretention">
+      <h2>No retention limit: personal data kept for ever</h2>
+      <pre class="err-text"><code>delete   exports/orders-2025-01.csv  (640 days old; Aadhaar number 212, Indian mobile number 4310)</code></pre>
+      <h3>Symptom</h3>
+      <p>Exports, CSV dumps, uploads and logs from years ago are still on disk or in buckets, and nobody knows if they are needed.</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>Data is collected for a purpose, but no job erases it when the purpose is served</li>
+        <li>Copies (exports, backups, test environments) are outside every retention rule</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 scripts/pii_retention.py /srv/exports --days 180
+aws s3api get-bucket-lifecycle-configuration --bucket &quot;$BUCKET&quot;</code></pre>
+      <h3>Fix</h3>
+      <p>Agree a retention period per kind of data with its owner, then enforce it: S3 lifecycle rules, database deletion jobs, and <code>pii_retention.py --apply</code> for file shares, with the dry-run report reviewed first.</p>
+      <h3>Prevent</h3>
+      <p>A retention period recorded for every data store when it is created, enforced by a scheduled job whose report someone reads; erasure requests handled by the same code path.</p>
+      <p><strong>Now learn it:</strong> take <a href="index.html#path/17">Level 17 · Personal data and India's DPDP Act</a>. Interactive version: <a href="index.html#fix/noretention">#fix/noretention</a>.</p>
+    </section>
+    <section class="card fix" id="prodtestdata">
+      <h2>Production personal data copied into test or staging</h2>
+      <pre class="err-text"><code>staging-db: 1,204,331 rows with real phone numbers and PAN, readable by every developer</code></pre>
+      <h3>Symptom</h3>
+      <p>Test databases, fixtures or a developer's laptop hold real customers' data, usually from a &quot;quick&quot; restore of a production backup.</p>
+      <h3>Why it happens</h3>
+      <ul>
+        <li>Restoring production is the easiest way to get realistic data</li>
+        <li>Test environments have weaker access control, logging and retention than production</li>
+      </ul>
+      <h3>Confirm</h3>
+      <pre><code>python3 scripts/pii_scanner.py tests/fixtures/ seed/
+python3 scripts/aws/pii_storage_audit.py --all-regions   # with test resources tagged too</code></pre>
+      <h3>Fix</h3>
+      <p>Replace it with synthetic data or an irreversibly masked copy, then delete the copied data everywhere it went (snapshots, dumps, laptops).</p>
+      <h3>Prevent</h3>
+      <p>A masking step in the only allowed path from production to test, the scanner in CI over fixtures, and production backups restorable only into production accounts.</p>
+      <p><strong>Now learn it:</strong> take <a href="index.html#path/17">Level 17 · Personal data and India's DPDP Act</a>. Interactive version: <a href="index.html#fix/prodtestdata">#fix/prodtestdata</a>.</p>
     </section>
   </main>
   <footer class="foot">

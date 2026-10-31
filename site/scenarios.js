@@ -2477,6 +2477,287 @@ publish({"new_checkout": True, "dark_mode": False, "max_basket": 50})
       }
     });
 
+    // --- Cloud automation (boto3) -------------------------------------------------------
+    // Tracebacks captured from Python 3.13 and boto3/botocore 1.43; botocore's
+    // internal frames between the first and the last are left out.
+
+    const BOTO = (fn, line, src) => vlib(`botocore/${fn}`, line, ...src);
+    const apiFrames = [BOTO("client.py", 606, ["_api_call", "return self._make_api_call(operation_name, kwargs)"]), BOTO("context.py", 123, ["wrapper", "return func(*args, **kwargs)"]),
+      BOTO("client.py", 1094, ["_make_api_call", "raise error_class(parsed_response, operation_name)"])];
+
+    S.push({
+      id: "awsregion", group: "AWS and boto3", level: "14", title: "NoRegionError under cron",
+      file: "ebs_report.py", cmd: "python3 ebs_report.py   # from cron: no ~/.bashrc, so no AWS_REGION",
+      story: "The weekly report of unattached EBS volumes works when you run it. From cron it has failed every Monday since it was added, and the volumes it should have reported cost money every day.",
+      goal: "Make the script work without a region in the environment, while still letting AWS_REGION choose one.",
+      checks: ["No NoRegionError under cron", "Reports the unattached volumes"],
+      code: src`
+import boto3
+
+ec2 = boto3.client("ec2")
+pages = ec2.get_paginator("describe_volumes").paginate(Filters=[{"Name": "status", "Values": ["available"]}])
+volumes = [v for page in pages for v in page["Volumes"]]
+print(f"{len(volumes)} unattached volumes, {sum(v['Size'] for v in volumes)} GiB")
+`,
+      fix: [["import boto3\n\nec2 = boto3.client(\"ec2\")", "import os\n\nimport boto3\n\nec2 = boto3.client(\"ec2\", region_name=os.environ.get(\"AWS_REGION\", \"eu-west-1\"))"]],
+      wrong: [
+        [["ec2 = boto3.client(\"ec2\")", "ec2 = boto3.client(\"ec2\", region_name=None)"]],
+        [["import boto3\n\nec2 = boto3.client(\"ec2\")", "import os\n\nimport boto3\n\nec2 = boto3.client(\"ec2\", region_name=os.environ.get(\"AWS_REGION\"))"]]
+      ],
+      hints: [
+        "It runs in your shell and not in cron. What does your shell have that cron does not?",
+        "boto3 takes the region from region_name, AWS_REGION / AWS_DEFAULT_REGION, or the profile in ~/.aws/config. cron has none of them, and boto3 never guesses.",
+        "Pass `region_name=os.environ.get(\"AWS_REGION\", \"eu-west-1\")` to boto3.client (with `import os`), or give the script a --region option."
+      ],
+      lesson: "Every boto3 client needs a region. Pass it explicitly or from an option, with the environment as an override, so the script behaves the same in a shell, cron, CI and containers.",
+      real: ["env -i HOME=\"$HOME\" PATH=/usr/bin:/bin python3 ebs_report.py   # an environment as bare as cron's"],
+      sim(py) {
+        const c = py.call("boto3\\.client");
+        if (!c || !py.has(/describe_volumes/)) return gone("it no longer lists the volumes");
+        const r = (c.kw.region_name || "").trim();
+        const fromEnvNoDefault = /^os\.(environ\.get|getenv)\(\s*["']AWS_(DEFAULT_)?REGION["']\s*\)$/.test(r);
+        if (/^os\.environ\[/.test(r)) {
+          return { out: traceback(py, "ebs_report.py", c.line, [["<frozen os>", 717, "__getitem__", ""]], `KeyError: '${(/["']([^"']+)["']/.exec(r) || [])[1] || "AWS_REGION"}'`), exit: 1, ok: [false, false] };
+        }
+        if (!r || r === "None" || fromEnvNoDefault) {
+          return { out: traceback(py, "ebs_report.py", c.line, [vlib("boto3/__init__.py", 93, "client", "return _get_default_session().client(*args, **kwargs)"),
+            vlib("boto3/session.py", 337, "client", "return self._session.create_client("), BOTO("regions.py", 285, ["_endpoint_for_partition", "raise NoRegionError()"])],
+          "botocore.exceptions.NoRegionError: You must specify a region."), exit: 1, ok: [false, false] };
+        }
+        return { out: py.has(/print\(/) ? lines("3 unattached volumes, 1700 GiB") : [], exit: 0, ok: [true, py.has(/print\(/)] };
+      }
+    });
+
+    S.push({
+      id: "awsretry", group: "AWS and boto3", level: "14", title: "Throttling: reached max retries",
+      file: "idle_report.py", cmd: "python3 idle_report.py   # 412 instances, 32 threads",
+      story: "The FinOps report looks for instances that peaked under 10% CPU in two weeks. With 412 instances and 32 threads it dies after a few seconds with a Throttling error, every time.",
+      goal: "Let the report finish for all 412 instances, without dropping any of them.",
+      checks: ["The run finishes without a Throttling error", "Every instance is checked; none is skipped"],
+      code: src`
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
+
+import boto3
+
+cw = boto3.client("cloudwatch", region_name="eu-west-1")
+ec2 = boto3.client("ec2", region_name="eu-west-1")
+ids = [i["InstanceId"] for page in ec2.get_paginator("describe_instances").paginate() for r in page["Reservations"] for i in r["Instances"]]
+end = datetime.now(timezone.utc)
+
+
+def peak_cpu(instance_id):
+    resp = cw.get_metric_statistics(Namespace="AWS/EC2", MetricName="CPUUtilization", Dimensions=[{"Name": "InstanceId", "Value": instance_id}],
+                                    StartTime=end - timedelta(days=14), EndTime=end, Period=3600, Statistics=["Maximum"])
+    return instance_id, max((p["Maximum"] for p in resp["Datapoints"]), default=0)
+
+
+with ThreadPoolExecutor(max_workers=32) as pool:
+    for instance_id, peak in pool.map(peak_cpu, ids):
+        if peak < 10:
+            print(f"{instance_id} peaked at {peak:.0f}% CPU in 14 days: downsize it?")
+`,
+      fix: [["import boto3\n\ncw = boto3.client(\"cloudwatch\", region_name=\"eu-west-1\")", "import boto3\nfrom botocore.config import Config\n\ncw = boto3.client(\"cloudwatch\", region_name=\"eu-west-1\", config=Config(retries={\"mode\": \"adaptive\", \"max_attempts\": 10}))"]],
+      wrong: [
+        [["ThreadPoolExecutor(max_workers=32)", "ThreadPoolExecutor(max_workers=64)"]],
+        [["    resp = cw.get_metric_statistics(", "    try:\n        resp = cw.get_metric_statistics("],
+         ["                                    StartTime=end - timedelta(days=14), EndTime=end, Period=3600, Statistics=[\"Maximum\"])\n", "                                        StartTime=end - timedelta(days=14), EndTime=end, Period=3600, Statistics=[\"Maximum\"])\n    except Exception:\n        return instance_id, 100\n"]]
+      ],
+      hints: [
+        "`reached max retries: 4` means botocore already retried, and gave up. The limit is per account and API, shared by all 32 threads.",
+        "The default retry mode tries five times in all. botocore has better modes: standard (more attempts, backoff with jitter) and adaptive (that, plus slowing the client down while it is throttled).",
+        "Create the CloudWatch client with `config=Config(retries={\"mode\": \"adaptive\", \"max_attempts\": 10})` (from botocore.config). A smaller pool also helps; swallowing the error loses instances."
+      ],
+      lesson: "Configure retries on every client: standard or adaptive mode, with enough attempts. Share the client between threads, keep the pool modest, and never hide throttling by skipping the item.",
+      real: ["python3 -c \"from botocore.config import Config; print(Config(retries={'mode': 'adaptive', 'max_attempts': 10}).retries)\""],
+      sim(py) {
+        const c = py.call("cw\\.get_metric_statistics");
+        if (!c || !py.has(/ThreadPoolExecutor/)) return gone("it no longer checks the instances");
+        const cl = at(py, /^\s*cw\s*=\s*boto3\.client\(/);
+        const cfg = py.calls("Config").find((x) => /retries/.test(x.args)) || null;
+        const mode = cfg ? ((/["']mode["']\s*:\s*["'](\w+)["']/.exec(cfg.args) || [])[1] || "legacy") : "legacy";
+        const attempts = cfg ? Number((/["']max_attempts["']\s*:\s*(\d+)/.exec(cfg.args) || [])[1] || (mode === "legacy" ? 5 : 3)) : 5;
+        const shared = cfg && (/config\s*=/.test(cl) || /Config\(/.test(cl));
+        const workers = Number((/max_workers\s*=\s*(\d+)/.exec(py.text) || [])[1] || 32);
+        const swallowed = Boolean(py.catches(c.line, ["ClientError"]));
+        const survives = workers <= 4 || (shared && (mode === "adaptive" || attempts >= 8));
+        const found = [dim("---- 412 instances, 14 days of CPU each")];
+        if (swallowed && !survives) {
+          return { out: [...found, ...lines("i-03f2e9c1a7b4d5e60 peaked at 2% CPU in 14 days: downsize it?"), err("(61 calls were throttled; the except clause counted those instances as busy, so they were never checked)")], exit: 0, ok: [true, false] };
+        }
+        if (!survives) {
+          return { out: [...found, ...lines("i-03f2e9c1a7b4d5e60 peaked at 2% CPU in 14 days: downsize it?"), ...traceback(py, "idle_report.py", py.line(/pool\.map\(/), [
+            lib("concurrent/futures/_base.py", 625, "result_iterator", "yield _result_or_cancel(fs.pop())"), lib("concurrent/futures/_base.py", 318, "_result_or_cancel", "return fut.result(timeout)"),
+            lib("concurrent/futures/_base.py", 453, "result", "return self.__get_result()"), lib("concurrent/futures/_base.py", 402, "__get_result", "raise self._exception"),
+            lib("concurrent/futures/thread.py", 59, "run", "result = self.fn(*self.args, **self.kwargs)"), [`${HOME}/idle_report.py`, c.line, "peak_cpu", py.src(c.line)], ...apiFrames],
+          "botocore.exceptions.ClientError: An error occurred (Throttling) when calling the GetMetricStatistics operation (reached max retries: 4): Rate exceeded")], exit: 1, ok: [false, !swallowed] };
+        }
+        return { out: [...found, ...(py.has(/print\(/) ? lines("i-03f2e9c1a7b4d5e60 peaked at 2% CPU in 14 days: downsize it?", "i-0b7d1e44c09a2f318 peaked at 6% CPU in 14 days: downsize it?", "i-0e9a5c2f1d3b47a86 peaked at 4% CPU in 14 days: downsize it?") : []),
+          dim(mode === "adaptive" ? "(throttled 37 times; adaptive retries slowed the client down and every call got through)" : "(throttled 37 times; every call got through on a retry)")], exit: 0, ok: [true, !swallowed] };
+      }
+    });
+
+    S.push({
+      id: "awspager", group: "AWS and boto3", level: "15", title: "Exactly 1,000 objects",
+      file: "export_size.py", cmd: "EXPORT_BUCKET=shop-exports python3 export_size.py",
+      story: "Storage for order exports is growing by a terabyte a month, but the script that sizes the orders/ prefix says 1000 objects and 12.7 GB, the same number every week.",
+      goal: "Count and size every object under orders/, all 48,213 of them.",
+      checks: ["Counts all 48,213 objects"],
+      code: src`
+import os
+
+import boto3
+
+BUCKET = os.environ["EXPORT_BUCKET"]
+s3 = boto3.client("s3", region_name="ap-south-1")
+resp = s3.list_objects_v2(Bucket=BUCKET, Prefix="orders/")
+objects = resp.get("Contents", [])
+total = sum(o["Size"] for o in objects)
+print(f"{len(objects)} objects, {total / 1e9:.1f} GB under orders/")
+`,
+      fix: [["resp = s3.list_objects_v2(Bucket=BUCKET, Prefix=\"orders/\")\nobjects = resp.get(\"Contents\", [])\n",
+        "pages = s3.get_paginator(\"list_objects_v2\").paginate(Bucket=BUCKET, Prefix=\"orders/\")\nobjects = [o for page in pages for o in page.get(\"Contents\", [])]\n"]],
+      wrong: [
+        [["Prefix=\"orders/\")\nobjects", "Prefix=\"orders/\", MaxKeys=100000)\nobjects"]],
+        [["objects = resp.get(\"Contents\", [])\n", "objects = resp.get(\"Contents\", [])\nwhile resp[\"IsTruncated\"]:\n    resp = s3.list_objects_v2(Bucket=BUCKET, Prefix=\"orders/\")\n    objects += resp.get(\"Contents\", [])\n    break\n"]]
+      ],
+      hints: [
+        "Exactly 1000 is suspicious. S3 returns at most 1,000 keys per call and says IsTruncated when there are more.",
+        "Each response carries a NextContinuationToken for the next page. Asking for more with MaxKeys does not help: S3 caps it at 1,000.",
+        "Let boto3 follow the pages: `pages = s3.get_paginator(\"list_objects_v2\").paginate(Bucket=BUCKET, Prefix=\"orders/\")`, then collect `page.get(\"Contents\", [])` from each page."
+      ],
+      lesson: "AWS list calls return pages. Use a paginator for every one of them, even when today's data fits in one page; a round number in a report is the sign that you did not.",
+      real: ["aws s3api list-objects-v2 --bucket \"$EXPORT_BUCKET\" --prefix orders/ --query 'length(Contents)'"],
+      sim(py) {
+        if (!py.has(/list_objects_v2/) || !py.has(/Size/)) return gone("it no longer lists and sizes the objects");
+        const pager = py.has(/get_paginator\(\s*["']list_objects_v2["']\s*\)/) && py.has(/\.paginate\(/);
+        const loop = py.calls("s3\\.list_objects_v2").some((c) => py.inside(c.line, /^while\b/) && /ContinuationToken\s*=/.test(c.args));
+        const all = pager || loop;
+        return { out: py.has(/print\(/) ? lines(all ? "48213 objects, 612.4 GB under orders/" : "1000 objects, 12.7 GB under orders/") : [], exit: 0, ok: [all] };
+      }
+    });
+
+    S.push({
+      id: "awsdryrun", group: "AWS and boto3", level: "16", title: "A clean-up with no dry run",
+      file: "delete_unattached.py", cmd: "python3 delete_unattached.py --region eu-west-1   # \"I only wanted to see the list\"",
+      story: "Someone ran the clean-up script to see which unattached volumes it would remove. It removed them, including a 500 GiB data volume the DBA had detached an hour earlier for a resize.",
+      goal: "Without --apply, only list what would be deleted, and let EC2 check the permission with DryRun=True. With --apply, delete.",
+      checks: ["Without --apply, nothing is deleted", "With --apply, the volumes are deleted", "The dry run asks EC2 (DryRun=True), so a missing permission shows first"],
+      code: src`
+import argparse
+
+import boto3
+
+ap = argparse.ArgumentParser(description="Delete unattached EBS volumes.")
+ap.add_argument("--region", required=True)
+args = ap.parse_args()
+ec2 = boto3.client("ec2", region_name=args.region)
+pages = ec2.get_paginator("describe_volumes").paginate(Filters=[{"Name": "status", "Values": ["available"]}])
+for page in pages:
+    for v in page["Volumes"]:
+        ec2.delete_volume(VolumeId=v["VolumeId"])
+        print(f"deleted {v['VolumeId']} ({v['Size']} GiB)")
+`,
+      fix: [["import boto3\n", "import boto3\nfrom botocore.exceptions import ClientError\n"],
+        ["ap.add_argument(\"--region\", required=True)\n", "ap.add_argument(\"--region\", required=True)\nap.add_argument(\"--apply\", action=\"store_true\", help=\"really delete; otherwise a dry run\")\n"],
+        ["        ec2.delete_volume(VolumeId=v[\"VolumeId\"])\n        print(f\"deleted {v['VolumeId']} ({v['Size']} GiB)\")\n",
+          "        try:\n            ec2.delete_volume(VolumeId=v[\"VolumeId\"], DryRun=not args.apply)\n            print(f\"deleted {v['VolumeId']} ({v['Size']} GiB)\")\n        except ClientError as e:\n            if e.response[\"Error\"][\"Code\"] != \"DryRunOperation\":\n                raise\n            print(f\"would delete {v['VolumeId']} ({v['Size']} GiB)\")\n"]],
+      wrong: [
+        [["ap.add_argument(\"--region\", required=True)\n", "ap.add_argument(\"--region\", required=True)\nap.add_argument(\"--apply\", action=\"store_true\")\n"]],
+        [["ec2.delete_volume(VolumeId=v[\"VolumeId\"])", "ec2.delete_volume(VolumeId=v[\"VolumeId\"], DryRun=True)"]]
+      ],
+      hints: [
+        "The script's only mode is \"delete\". Safe automation shows what it would change first, and changes things only when asked.",
+        "Add an --apply flag. EC2 calls accept DryRun=True: EC2 checks the request and the permission, and answers with a DryRunOperation error instead of doing it.",
+        "Call `ec2.delete_volume(VolumeId=..., DryRun=not args.apply)` inside try; in `except ClientError as e`, a code of DryRunOperation means \"would delete\"; re-raise anything else."
+      ],
+      lesson: "Anything that deletes or changes should be a dry run by default. With EC2, DryRun=True also proves the permission. Catch DryRunOperation: it is how EC2 says yes.",
+      real: ["aws ec2 delete-volume --volume-id vol-0123456789abcdef0 --dry-run"],
+      sim(py) {
+        const del = py.call("ec2\\.delete_volume");
+        if (!del || !py.has(/describe_volumes/)) return gone("it no longer finds and deletes the volumes");
+        const hasApply = py.has(/add_argument\(\s*["']--apply["']/);
+        const guard = py.inside(del.line, /^if\b/);
+        const guarded = Boolean(guard) && /^if\s+args\.apply\s*:/.test(guard.code);
+        const dry = (del.kw.DryRun || "").trim();
+        const dryByFlag = /^not\s+args\.apply$/.test(dry);
+        const handler = py.catches(del.line, ["ClientError"]);
+        const handlesDry = Boolean(handler) && /DryRunOperation/.test(handler.body);
+        const vols = [["vol-0c3a91e2f7d5b8a14", 500], ["vol-04e7b2d9c1a6f3e58", 8], ["vol-0f1d8c3b5a9e27640", 20]];
+        const header = dim("---- without --apply");
+        if (dry === "True" || (dryByFlag && !handlesDry)) {
+          return { out: [header, ...traceback(py, "delete_unattached.py", del.line, apiFrames,
+            "botocore.exceptions.ClientError: An error occurred (DryRunOperation) when calling the DeleteVolume operation: Request would have succeeded, but DryRun flag is set.")], exit: 1, ok: [true, dryByFlag, false] };
+        }
+        if (dryByFlag && !hasApply) {
+          return { out: [header, ...traceback(py, "delete_unattached.py", del.line, null, "AttributeError: 'Namespace' object has no attribute 'apply'")], exit: 1, ok: [true, false, false] };
+        }
+        if (dryByFlag && hasApply) {
+          return { out: [header, ...vols.map(([id, gib]) => [`would delete ${id} (${gib} GiB)`, ""]), dim("(with --apply: deleted 3 volumes)")], exit: 0, ok: [true, true, true] };
+        }
+        if (guarded && hasApply) {
+          return { out: [header, dim("(nothing printed, nothing deleted; with --apply: deleted 3 volumes)")], exit: 0, ok: [true, true, false] };
+        }
+        return { out: [header, ...vols.map(([id, gib]) => [`deleted ${id} (${gib} GiB)`, "err"]), dim("vol-0c3a91e2f7d5b8a14 was the database volume detached for a resize")], exit: 0, ok: [false, true, false] };
+      }
+    });
+
+    // --- Personal data -----------------------------------------------------------------
+
+    S.push({
+      id: "piilog", group: "Personal data", level: "17", title: "Aadhaar numbers in the log",
+      file: "kyc_check.py", cmd: "python3 kyc_check.py   # logs are shipped to the log platform and kept 400 days",
+      story: "The personal-data scanner in CI flagged the KYC service's sample logs: every verification writes the customer's whole record, Aadhaar number and phone included, and those logs go to a third-party platform.",
+      goal: "Keep a log line per verification, with the customer id, and no personal data at all.",
+      checks: ["No personal data in the log output", "Each verification is still logged with the customer id", "No log call is given the whole record or a personal field"],
+      code: src`
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+log = logging.getLogger("kyc")
+
+
+def verify(customer):
+    log.info("verifying customer %s", customer)
+    ok = len(customer["aadhaar"].replace(" ", "")) == 12 and customer["consent"]
+    log.info("customer %s verified=%s", customer["id"], ok)
+    return ok
+
+
+verify({"id": "c-1042", "name": "Asha Rao", "phone": "+91 98XXX XXX10", "aadhaar": "XXXX XXXX 2346", "consent": True})
+`,
+      fix: [["log.info(\"verifying customer %s\", customer)", "log.info(\"verifying customer %s\", customer[\"id\"])"]],
+      wrong: [
+        [["log.info(\"verifying customer %s\", customer)", "log.debug(\"verifying customer %s\", customer)"]],
+        [["log.info(\"verifying customer %s\", customer)", "log.info(\"verifying customer %s\", customer[\"name\"])"]]
+      ],
+      hints: [
+        "Run python3 scripts/pii_scanner.py on the output. Which line put the Aadhaar number there?",
+        "Moving the line to debug hides it today; the next person who turns on debugging leaks it again. A name is personal data too.",
+        "Log the identifier, not the record: `log.info(\"verifying customer %s\", customer[\"id\"])`. Then redact the logs already shipped."
+      ],
+      lesson: "Log identifiers, never personal records or fields, at any level. Data in logs is copied, shipped and kept longer than anyone plans, which makes it a privacy incident waiting to happen.",
+      real: ["python3 kyc_check.py 2>&1 | python3 scripts/log_redactor.py"],
+      sim(py) {
+        if (!py.call("verify") || !py.has(/def\s+verify\b/)) return gone("it no longer verifies the customer");
+        const calls = py.calls("print|(logging|log|logger)\\.(debug|info|warning|error|critical|exception)");
+        const personal = (a) => /\bcustomer\b(?!\s*\[\s*["']id["']\s*\])/.test(a) && !/mask|redact/.test(a);
+        const leaky = calls.filter((c) => personal(c.args.replace(/^\s*["'][^"']*["']\s*,?/, "")));
+        const debug = /DEBUG/.test(at(py, /basicConfig\(/));
+        const shown = leaky.filter((c) => !/\.debug$/.test(c.name) || debug);
+        const out = [];
+        if (shown.length) {
+          const named = /\[\s*["'](\w+)["']\s*\]/.exec(shown[0].args);
+          const what = named ? { name: "Asha Rao", phone: "+91 98XXX XXX10", aadhaar: "XXXX XXXX 2346" }[named[1]] || named[1]
+            : "{'id': 'c-1042', 'name': 'Asha Rao', 'phone': '+91 98XXX XXX10', 'aadhaar': 'XXXX XXXX 2346', 'consent': True}";
+          out.push([`INFO verifying customer ${what}`, "err"]);
+        } else if (calls.some((c) => /verifying/.test(c.args) && /customer\s*\[\s*["']id["']\s*\]/.test(c.args) && !/\.debug$/.test(c.name))) out.push(["INFO verifying customer c-1042", ""]);
+        const verified = calls.some((c) => /verified/.test(c.args) && /customer\s*\[\s*["']id["']\s*\]/.test(c.args));
+        if (verified) out.push(["INFO customer c-1042 verified=True", ""]);
+        return { out, exit: 0, ok: [!shown.length, verified, !leaky.length] };
+      }
+    });
+
     return S;
   };
 })(typeof window !== "undefined" ? window : globalThis);
