@@ -42,7 +42,7 @@
 
 ```bash
 python3 -m http.server 8000 --directory site    # then open http://localhost:8000
-node tools/build-problems.js                    # after changing the troubleshooting data
+node tools/build-problems.js                    # after changing the troubleshooting data, scenarios or quiz
 for t in check_site_data check_playground check_xray check_problems fuzz; do node site-tests/$t.js; done
 ```
 
@@ -145,7 +145,7 @@ The tests use botocore's Stubber, so they need no network and no AWS account.
 | [`requirements-aws.txt`](requirements-aws.txt) | boto3 and its dependencies, exact versions with hashes |
 | [`site/`](site) | The learning site (static HTML, CSS and JavaScript) |
 | [`site-tests/`](site-tests) | Node tests and a fuzzer for the site |
-| [`tools/`](tools) | Generator for `site/problems.html` |
+| [`tools/`](tools) | Generator for `site/problems.html` and `site/scenario-index.js` |
 | [`.github/workflows/`](.github/workflows) | CI and the GitHub Pages deploy |
 
 ## Troubleshooting

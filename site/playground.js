@@ -341,24 +341,8 @@
   };
   let scenario = SCENARIOS[0], hint = 0, solved = false;
 
-  function groups() {
-    const m = new Map();
-    for (const s of SCENARIOS) { if (!m.has(s.group)) m.set(s.group, []); m.get(s.group).push(s); }
-    return [...m];
-  }
-
-  function renderPicker(justSolved) {
-    const done = new Set(store.get("solved", []));
-    picker.replaceChildren(...groups().map(([name, list]) => {
-      const n = list.filter((s) => done.has(s.id)).length;
-      return h("div.pg-group", null,
-        h("span.pg-group-name", null, name, h("span.pg-group-count" + (n === list.length ? ".done" : "") + (justSolved && list.includes(scenario) ? ".bump" : ""), null, `${n}/${list.length}`)),
-        h("div.pg-group-items", null, list.map((s) => h("button.pg-scn" + (justSolved && s === scenario ? ".just-solved" : ""), {
-          type: "button", "aria-pressed": String(s === scenario), title: done.has(s.id) ? `${s.title} (solved)` : s.title,
-          onclick: () => { location.hash = "play/" + s.id; }
-        }, done.has(s.id) ? h("span.pg-scn-done", { "aria-hidden": "true" }, "✓") : null, s.title))));
-    }));
-  }
+  // The picker, brief and checks are shared with app.js, which draws them before this script loads.
+  const renderPicker = (justSolved) => root.PYUI.renderPicker(scenario.id, justSolved);
 
   function numbers() {
     const n = editor.value.split("\n").length;
@@ -367,14 +351,7 @@
     gutter.scrollTop = editor.scrollTop;
   }
 
-  function renderChecks(state) {
-    $("pg-checks").replaceChildren(...scenario.checks.map((label, i) => {
-      const ok = state ? state.checks[i][1] : null;
-      return h("li" + (ok === true ? ".ok" : ok === false ? ".bad" : ""), null,
-        h("span.pg-check-dot", { "aria-hidden": "true" }, ok === true ? "✓" : ok === false ? "✕" : "·"),
-        label, h("span.visually-hidden", null, ok === true ? " (passing)" : ok === false ? " (failing)" : " (not run yet)"));
-    }));
-  }
+  const renderChecks = (state) => root.PYUI.renderChecks(scenario.checks, state);
 
   function load(id, keep) {
     scenario = SCENARIOS.find((s) => s.id === id) || SCENARIOS[0];
@@ -383,18 +360,10 @@
     const drafts = store.get("drafts", {});
     editor.value = keep && drafts[scenario.id] != null ? drafts[scenario.id] : scenario.code;
     editor.dataset.errorLine = "";
-    $("pg-file").textContent = scenario.file;
-    $("pg-title-now").textContent = scenario.title;
-    $("pg-story").textContent = scenario.story;
-    $("pg-goal").textContent = "Goal: " + scenario.goal;
-    $("pg-goal").className = "pg-goal";
-    $("pg-level").textContent = `Level ${scenario.level} · ${(root.TRACK.levels.find((l) => l.id === scenario.level) || {}).title || ""}`;
-    $("pg-level").href = "#path/" + scenario.level;
+    root.PYUI.renderBrief(scenario);
     $("pg-real").textContent = scenario.real.join("\n");
     $("pg-hint").replaceChildren();
-    out.replaceChildren(h("div.pg-line.dim", null, `$ ${scenario.cmd}`), h("div.pg-line.dim", null, "Edit the script, then choose Run (Ctrl+Enter)."));
     renderPicker();
-    renderChecks(null);
     numbers();
     const cur = picker.querySelector('[aria-pressed="true"]');
     if (cur && picker.scrollWidth > picker.clientWidth) picker.scrollLeft = cur.offsetLeft - 48;
