@@ -61,7 +61,8 @@ def main(argv=None):
         return 2
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"}, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        # The URL was checked to be https:// above, so urlopen cannot be pointed at file:// (bandit B310).
+        with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
             print(f"sent ({resp.status})")
             return 0
     except (urllib.error.URLError, OSError) as e:

@@ -9,6 +9,7 @@ import socket
 import sys
 import tempfile
 import threading
+import time
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "scripts"))
@@ -19,6 +20,9 @@ import disk_report  # noqa: E402
 import env_validator  # noqa: E402
 import http_monitor  # noqa: E402
 import log_analyzer  # noqa: E402
+import log_redactor  # noqa: E402
+import pii_retention  # noqa: E402
+import pii_scanner  # noqa: E402
 import port_check  # noqa: E402
 import secret_scanner  # noqa: E402
 import webhook_notify  # noqa: E402
@@ -195,6 +199,84 @@ class DiskAndWebhook(unittest.TestCase):
         self.assertIn("backup failed", out)
         os.environ.pop("WEBHOOK_URL", None)
         self.assertEqual(run(webhook_notify.main, "x")[0], 2, "no URL configured")
+
+
+def aadhaar(first11):
+    """A number that passes the Verhoeff check, made up at test time so none is stored here."""
+    return next(first11 + c for c in "0123456789" if pii_scanner.verhoeff_ok(first11 + c))
+
+
+class PersonalData(unittest.TestCase):
+    def sample(self):
+        a = aadhaar("27364918520")
+        return a, (f"id={a[:4]} {a[4:8]} {a[8:]} pan=ABCPK1234Q\n"
+                   "contact mobile +91 98765 43210 upi ravi.k@okaxis mail ravi@shop.co.in\n"
+                   "order 9876543210 build 123456789012 dev@example.com\n"
+                   "passport J8369854 voter ABC1234567\n"
+                   "refund HDFC0001234 a/c 50100123456789\n")
+
+    def test_verhoeff(self):
+        a = aadhaar("27364918520")
+        self.assertTrue(pii_scanner.verhoeff_ok(a))
+        self.assertFalse(pii_scanner.verhoeff_ok(a[:-1] + str((int(a[-1]) + 1) % 10)), "one wrong digit fails the checksum")
+
+    def test_finds_each_kind_masked(self):
+        a, text = self.sample()
+        hits = pii_scanner.scan_text(text)
+        self.assertEqual(sorted({h["kind"] for h in hits}), sorted(kind for kind, _, _ in pii_scanner.RULES))
+        self.assertEqual(len(hits), 8, "no hit on line 3: no context word, a 1 first, an example domain")
+        for value in (a, "ABCPK1234Q", "98765 43210", "ravi.k@okaxis", "J8369854", "50100123456789"):
+            self.assertFalse(any(value in h["match"] for h in hits), f"{value} is masked")
+        self.assertEqual(len(pii_scanner.scan_text(text, loose=True)), 9, "--loose also reports the bare mobile number")
+
+    def test_scanner_exit_and_allowlist(self):
+        _, text = self.sample()
+        with tempfile.TemporaryDirectory() as d:
+            log = pathlib.Path(d, "app.log")
+            log.write_text(text)
+            code, out = run(pii_scanner.main, str(log), "--allowlist", "/nonexistent")
+            self.assertEqual(code, 1)
+            self.assertIn("8 item(s) of personal data in 1 file(s)", out)
+            self.assertNotIn("ABCPK1234Q", out)
+            allow = pathlib.Path(d, "allow")
+            allow.write_text(".\n")
+            self.assertEqual(run(pii_scanner.main, str(log), "--allowlist", str(allow))[0], 0)
+
+    def test_redactor_report_then_apply(self):
+        a, text = self.sample()
+        self.assertEqual(log_redactor.redact("aadhaar " + a + " ok\n"), "aadhaar [AADHAAR] ok\n")
+        with tempfile.TemporaryDirectory() as d:
+            log = pathlib.Path(d, "app.log")
+            log.write_text(text)
+            log.chmod(0o640)
+            code, out = run(log_redactor.main, str(log))
+            self.assertEqual(code, 0)
+            self.assertIn("would mask 8", out)
+            self.assertEqual(log.read_text(), text, "a report changes nothing")
+            run(log_redactor.main, str(log), "--apply")
+            self.assertEqual(pii_scanner.scan_text(log.read_text()), [])
+            self.assertIn("[PAN]", log.read_text())
+            self.assertEqual(log.stat().st_mode & 0o777, 0o640, "permissions kept")
+            self.assertEqual(os.listdir(d), ["app.log"], "no temporary file left")
+
+    def test_retention_dry_run_then_apply(self):
+        _, text = self.sample()
+        with tempfile.TemporaryDirectory() as d:
+            old, new, clean = pathlib.Path(d, "old.csv"), pathlib.Path(d, "new.csv"), pathlib.Path(d, "clean.csv")
+            for f in (old, new):
+                f.write_text(text)
+            clean.write_text("no personal data\n")
+            past = time.time() - 200 * 86400
+            for f in (old, clean):
+                os.utime(f, (past, past))
+            os.symlink(old, pathlib.Path(d, "link.csv"))
+            code, out = run(pii_retention.main, d, "--days", "180", "--pattern", "*.csv")
+            self.assertEqual(code, 1)
+            self.assertIn("1 file(s) past the 180-day", out)
+            self.assertTrue(old.exists())
+            self.assertEqual(run(pii_retention.main, d, "--days", "180", "--pattern", "*.csv", "--apply")[0], 0)
+            self.assertEqual(sorted(os.listdir(d)), ["clean.csv", "link.csv", "new.csv"], "only the old file with personal data goes")
+            self.assertEqual(len(pii_retention.expired(d, 180, "*.csv", any_file=True)), 1, "--any counts the old clean file too")
 
 
 if __name__ == "__main__":
