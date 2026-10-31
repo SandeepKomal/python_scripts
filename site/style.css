@@ -366,7 +366,7 @@ main { min-height: 70vh; padding-bottom: 40px; }
   #xray-note { position: static; }
 }
 /* Brand and search on the first row, the Learn and Fix menus centred on the second. */
-@media (max-width: 1100px) {
+@media (max-width: 1024px) {
   .top-inner { gap: 6px 10px; flex-wrap: wrap; height: auto; padding-top: 8px; padding-bottom: 6px; }
   .brand { flex: 1; }
   .top nav { order: 3; flex-basis: 100%; flex-wrap: wrap; justify-content: center; gap: 6px; overflow: visible; }
@@ -376,6 +376,7 @@ main { min-height: 70vh; padding-bottom: 40px; }
   .wrap { padding: 0 16px; }
   .kbd-btn span { display: none; }
   .kbd-btn { padding: 5px; }
+  .top nav a { padding: 6px 4px; }
   .mode { flex-wrap: wrap; justify-content: center; }
   .doors { grid-template-columns: minmax(0, 1fr); }
   .door-search { flex-direction: column; }

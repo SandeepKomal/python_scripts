@@ -162,7 +162,11 @@
       ...stages.map((st, i) => { const [x, y] = at(i, R * Math.max(st.v, .04)); return svg("circle", { cx: x, cy: y, r: 3.5, class: "eng-r-dot" }); }),
       ...stages.map((st, i) => {
         const [x, y] = at(i, R + 12);
-        return svg("text", { x, y: y + 4, "text-anchor": Math.abs(x) < 8 ? "middle" : x > 0 ? "start" : "end", class: "eng-r-label" }, st.name);
+        // Long stage names go on two lines so they stay inside the panel.
+        const w = st.name.split(" "), half = Math.ceil(w.length / 2);
+        const lines = st.name.length > 16 ? [w.slice(0, half).join(" "), w.slice(half).join(" ")] : [st.name];
+        return svg("text", { x, y: y + 4 - (lines.length - 1) * 6, "text-anchor": Math.abs(x) < 8 ? "middle" : x > 0 ? "start" : "end", class: "eng-r-label" },
+          ...lines.map((l, j) => svg("tspan", { x, dy: j ? 12 : 0 }, l)));
       }));
     const top = stages.reduce((a, b) => (b.v > a.v ? b : a));
     return h("div.eng-panel", null, h("p.eng-k", null, "Your skill shape"), pic,
