@@ -515,3 +515,28 @@ main { min-height: 70vh; padding-bottom: 40px; }
 @media (prefers-reduced-motion: reduce) { .brand-back { transition: none; } }
 /* Narrow phones: the logo stands for DevOps Nimbus so the header keeps one row. */
 @media (max-width: 440px) { .brand-hub > span:not([class]) { display: none; } }
+
+/* While a feature's code is still arriving, its space shows calm grey lines in the shape it will
+   fill, and the first screen fades in once as one piece. Both stop for reduced motion. */
+#quiz-list:empty, #stdlib:empty {
+  border-radius: var(--radius-sm);
+  background: repeating-linear-gradient(to bottom, var(--code-bg) 0 12px, transparent 12px 28px) 0 0 / 100% 100% no-repeat;
+}
+#quiz-list:empty { min-height: 320px; }
+#arch:empty { min-height: min(645px, calc(54vw + 40px)); border: 1px solid var(--hair); border-radius: var(--radius); background: var(--surface) linear-gradient(var(--code-bg), var(--code-bg)) 50% 50% / calc(100% - 40px) calc(100% - 40px) no-repeat; }
+#stdlib:empty { min-height: 672px; border-radius: var(--radius); background: linear-gradient(var(--bg), var(--bg)) 0 242px / 100% 14px no-repeat, linear-gradient(var(--bg), var(--bg)) 0 457px / 100% 14px no-repeat, repeating-linear-gradient(to right, var(--code-bg) 0 calc((100% - 28px) / 3), transparent calc((100% - 28px) / 3) calc((100% - 28px) / 3 + 14px)); }
+/* The editor: grey code lines beside the gutter until the playground draws the line numbers. */
+.pg-code-wrap:has(> .pg-gutter:empty) { background: repeating-linear-gradient(to bottom, color-mix(in srgb, #fff 9%, transparent) 0 9px, transparent 9px 21px) 50px 18px / 60% 219px no-repeat; }
+#quiz-list:empty, #arch:empty, #stdlib:empty, .pg-code-wrap:has(> .pg-gutter:empty) { animation: nimbus-skel 1.6s ease-in-out infinite alternate; }
+@keyframes nimbus-skel { from { opacity: .5; } to { opacity: 1; } }
+#stage:not(:empty), #stats:not(:empty), #engage:not(:empty), #bento:not(:empty), #levels:not(:empty) { animation: nimbus-fade .2s ease-out both; }
+@keyframes nimbus-fade { from { opacity: 0; transform: translateY(4px); } }
+@media (max-width: 1000px) { #stdlib:empty { min-height: 712px; } }
+@media (max-width: 900px) { #stdlib:empty { min-height: 1746px; border-radius: var(--radius-sm); background: repeating-linear-gradient(to bottom, var(--code-bg) 0 12px, transparent 12px 28px); } }
+@media (max-width: 760px) { .pg-code-wrap:has(> .pg-gutter:empty) { min-height: 357px; } }
+@media (max-width: 720px) { #arch:empty { min-height: calc(199vw + 71px); } }
+@media (max-width: 440px) { #stdlib:empty { min-height: 1826px; } }
+@media (prefers-reduced-motion: reduce) {
+  #quiz-list:empty, #arch:empty, #stdlib:empty, .pg-code-wrap:has(> .pg-gutter:empty) { animation: none; }
+  #stage:not(:empty), #stats:not(:empty), #engage:not(:empty), #bento:not(:empty), #levels:not(:empty) { animation: none; }
+}

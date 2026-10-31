@@ -106,7 +106,7 @@
   function select(id) { light(id ? [id] : []); place(id); }
 
   const practise = (c) => {
-    const titles = Object.fromEntries((window.PYPlayground ? window.PYPlayground.scenarios : []).map((x) => [x.id, x.title]));
+    const titles = Object.fromEntries(window.TRACK_SCENARIOS.map((x) => [x.id, x.title]));
     const ids = c.practise.filter((id) => titles[id]);
     return ids.length ? h("div.chips", null, h("span.muted.small", null, "Practise:"), ids.map((id) => h("a.chip", { href: "#play/" + id }, titles[id]))) : null;
   };
@@ -184,7 +184,7 @@
   }
 
   function renderStdlib() {
-    const titles = Object.fromEntries((window.PYPlayground ? window.PYPlayground.scenarios : []).map((x) => [x.id, x.title]));
+    const titles = Object.fromEntries(window.TRACK_SCENARIOS.map((x) => [x.id, x.title]));
     document.getElementById("stdlib").replaceChildren(...A.stdlib.map(([name, what, code, id]) => h("div.card.stdlib-card", null,
       h("h4", null, name), h("p", null, what), h("pre", null, h("code", null, code)),
       titles[id] ? h("a.chip", { href: "#play/" + id }, titles[id]) : null)));
@@ -193,5 +193,8 @@
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && (pinned || touring)) { pinned = null; stopTour(); select(null); } });
   matchMedia("(max-width: 720px)").addEventListener("change", draw);
   window.addEventListener("hashchange", () => { if (location.hash !== "#arch") stopTour(); });
-  window.addEventListener("DOMContentLoaded", () => { draw(); root.replaceChildren(figure, detail); renderStdlib(); });
+  // app.js loads this script after the first screen, usually after DOMContentLoaded.
+  const start = () => { draw(); root.replaceChildren(figure, detail); renderStdlib(); };
+  if (document.readyState === "loading") window.addEventListener("DOMContentLoaded", start);
+  else start();
 })();

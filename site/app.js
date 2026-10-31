@@ -41,9 +41,80 @@
     copyText(button, location.href.split("#")[0] + "#" + fragment, "Link copied");
   }
   const copyButton = (text) => h("button.copy", { type: "button", "data-label": "Copy", onclick: (e) => copyText(e.currentTarget, text, "Copied") }, "Copy");
-  window.PYUI = { h, rich, copyLink };
+  const SCENARIOS = window.TRACK_SCENARIOS;
+  const scenarioTitles = () => Object.fromEntries(SCENARIOS.map((s) => [s.id, s.title]));
 
-  const scenarioTitles = () => Object.fromEntries((window.PYPlayground ? window.PYPlayground.scenarios : []).map((s) => [s.id, s.title]));
+  // --- heavy features load after the first screen ----------------------------------
+  // The first screen needs only data.js, scenario-index.js, this file and engage.js. The
+  // rest loads in the background once it is drawn, and at once when someone needs it.
+  const FEATURES = {
+    play: ["scenarios.js", "playground.js"],
+    xray: ["scenarios.js", "playground.js", "xray.js"], // the X-ray reads Python with the playground's parser
+    quiz: ["quiz-bank.js"],
+    arch: ["architecture.js"]
+  };
+  const scripts = {};
+  // Appends the scripts in order and resolves once they have all run. They download in
+  // parallel; a list of several runs in its own order.
+  function load(srcs) {
+    return Promise.all(srcs.map((src) => scripts[src] || (scripts[src] = new Promise((resolve, reject) => {
+      const el = document.createElement("script");
+      el.src = src;
+      el.async = srcs.length === 1;
+      el.onload = resolve;
+      el.onerror = () => { delete scripts[src]; el.remove(); reject(new Error("Could not load " + src)); };
+      document.body.append(el);
+    }))));
+  }
+  const ready = {};
+  // need("quiz").then(...): anything that calls into a lazy feature waits for it here.
+  function need(name) {
+    return ready[name] || (ready[name] = load(FEATURES[name]).then(() => { if (INIT[name]) INIT[name](); })
+      .catch((e) => { delete ready[name]; throw e; }));
+  }
+
+  // The playground's picker, brief and checks. They are drawn from the index with the
+  // first screen, so the playground keeps its size when its script arrives;
+  // playground.js redraws them as scenarios change and runs finish.
+  function renderPicker(currentId, justSolved) {
+    const done = new Set(store.get("solved", []));
+    const groups = [];
+    for (const s of SCENARIOS) {
+      let g = groups.find((x) => x.name === s.group);
+      if (!g) groups.push(g = { name: s.group, list: [] });
+      g.list.push(s);
+    }
+    $("#pg-scenarios").replaceChildren(...groups.map(({ name, list }) => {
+      const n = list.filter((s) => done.has(s.id)).length;
+      return h("div.pg-group", null,
+        h("span.pg-group-name", null, name, h("span.pg-group-count" + (n === list.length ? ".done" : "") + (justSolved && list.some((s) => s.id === currentId) ? ".bump" : ""), null, `${n}/${list.length}`)),
+        h("div.pg-group-items", null, list.map((s) => h("button.pg-scn" + (justSolved && s.id === currentId ? ".just-solved" : ""), {
+          type: "button", "aria-pressed": String(s.id === currentId), title: done.has(s.id) ? `${s.title} (solved)` : s.title,
+          onclick: () => { location.hash = "play/" + s.id; }
+        }, done.has(s.id) ? h("span.pg-scn-done", { "aria-hidden": "true" }, "✓") : null, s.title))));
+    }));
+  }
+  function renderChecks(labels, state) {
+    $("#pg-checks").replaceChildren(...labels.map((label, i) => {
+      const ok = state ? state.checks[i][1] : null;
+      return h("li" + (ok === true ? ".ok" : ok === false ? ".bad" : ""), null,
+        h("span.pg-check-dot", { "aria-hidden": "true" }, ok === true ? "✓" : ok === false ? "✕" : "·"),
+        label, h("span.visually-hidden", null, ok === true ? " (passing)" : ok === false ? " (failing)" : " (not run yet)"));
+    }));
+  }
+  function renderBrief(s) {
+    $("#pg-file").textContent = s.file;
+    $("#pg-title-now").textContent = s.title;
+    $("#pg-story").textContent = s.story;
+    $("#pg-goal").textContent = "Goal: " + s.goal;
+    $("#pg-goal").className = "pg-goal";
+    $("#pg-level").textContent = `Level ${s.level} · ${(Q.levels.find((l) => l.id === s.level) || {}).title || ""}`;
+    $("#pg-level").href = "#path/" + s.level;
+    $("#pg-out").replaceChildren(h("div.pg-line.dim", null, `$ ${s.cmd}`), h("div.pg-line.dim", null, "Edit the script, then choose Run (Ctrl+Enter)."));
+    renderChecks(s.checks, null);
+  }
+  window.PYUI = { h, rich, copyLink, need, renderPicker, renderChecks, renderBrief };
+
   const practiseChips = (ids) => {
     const titles = scenarioTitles();
     const list = (ids || []).filter((id) => titles[id]);
@@ -70,7 +141,10 @@
       if (!sub && want !== "play") window.scrollTo(0, 0);
     }
     current = tab;
-    if (want === "play" && sub && window.PYPlayground) { window.PYPlayground.load(sub); scrollToEl($("#pg")); }
+    if (FEATURES[tab]) need(tab);
+    if (tab === "cheats") drawCheats();
+    if (tab === "scripts") drawScripts();
+    if (want === "play" && sub) need("play").then(() => { if (decodeURIComponent(location.hash) === "#play/" + sub) { window.PYPlayground.load(sub); scrollToEl($("#pg")); } });
     if (want === "path" && sub) scrollToEl(document.getElementById("lv-" + sub));
     if (want === "fix") showFix(sub, Boolean(sub));
     document.title = want === "fix" && sub && fixById(sub) ? `${fixById(sub).title} · Python for DevOps` : "Python for DevOps · DevOps Nimbus";
@@ -108,7 +182,7 @@
   }
 
   function renderHome() {
-    const n = window.PYPlayground ? window.PYPlayground.scenarios.length : 0;
+    const n = SCENARIOS.length;
     $("#stats").replaceChildren(...[[String(n), "incidents to fix in the browser"], [String(Q.levels.length), "levels, basics to production"], [String(Q.scripts.length), "tested scripts, for servers and AWS"]]
       .map(([b, s]) => h("div", null, h("b", null, b), h("span", null, s))));
     const tiles = [
@@ -116,7 +190,7 @@
       ["#cheats", "Cheat sheet", "subprocess, pathlib, venv.", "Recipes with a scenario to try each one.", "wide"],
       ["#xray", "Script X-ray", "Every line, explained.", "Risky patterns flagged."],
       ["#scripts", "Scripts", `${Q.scripts.length}, tested.`, "Logs, certs, secrets, AWS, personal data."],
-      ["#quiz", "Quiz", "Know why.", `${Object.values(window.TRACK_QUIZ).flat().length} questions.`],
+      ["#quiz", "Quiz", "Know why.", `${window.TRACK_QUIZ_SIZE} questions.`],
       ["#arch", "How Python runs", "Interpreter to system calls.", "Venvs, pip, the GIL, threads, processes, asyncio.", "wide"],
       ["#fix", "Stuck on an error?", "Learn why it happens, then practise the fix.", `Paste a traceback. ${Q.doctor.length} errors, each with cause, fix and prevention.`, "wide"]
     ];
@@ -153,7 +227,7 @@
           h("ul.learn", null, lv.learn.map((t) => h("li", null, ...rich(t)))),
           h("div.lab", null, h("span.small.muted", null, "Lab: ", lv.lab), h("div.lab-cmd", null, h("code", null, lv.cmd), copyButton(lv.cmd))),
           h("div.chips", null, lv.scenarios.filter((id) => titles[id]).map((id) => h("a.chip", { href: "#play/" + id }, titles[id])),
-            h("a.chip.quiet", { href: "#quiz", onclick: () => { $("#quiz-level").value = lv.id; renderQuiz(); } }, score == null ? "Quiz" : `Quiz ${score}%`)))));
+            h("a.chip.quiet", { href: "#quiz", onclick: () => quizFor(lv.id) }, score == null ? "Quiz" : `Quiz ${score}%`)))));
     }
     $("#bar-fill").style.width = (done.size / Q.levels.length * 100) + "%";
     $("#bar").setAttribute("aria-valuenow", String(done.size));
@@ -162,6 +236,9 @@
 
   // --- scripts --------------------------------------------------------------------
 
+  // The catalogue is drawn after the first screen, or when its tab opens.
+  let scriptsDrawn = false;
+  function drawScripts() { if (!scriptsDrawn) { scriptsDrawn = true; renderScripts(); } }
   function renderScripts() {
     const groups = [...new Set(Q.scripts.map((s) => s.group || "Standard library"))];
     $("#scripts-list").replaceChildren(...groups.flatMap((g) => [h("h3.stage-name.script-group", null, g), ...Q.scripts.filter((s) => (s.group || "Standard library") === g).map((s) => h("article.card.script", { id: "script-" + s.file.replace(".py", "").replace(/\W/g, "-") },
@@ -177,6 +254,14 @@
   // --- quiz -----------------------------------------------------------------------
 
   const shuffle = (list) => { const a = [...list]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  // Opens the quiz at a level once the question bank has loaded.
+  const quizFor = (id) => need("quiz").then(() => { $("#quiz-level").value = id; renderQuiz(); });
+  function initQuiz() {
+    $("#quiz-level").append(h("option", { value: "exam" }, "Exam: 15 random questions from every level"),
+      ...Q.levels.map((l) => h("option", { value: l.id }, `${l.id} · ${l.topic} (${window.TRACK_QUIZ[l.id].length} questions)`)));
+    $("#quiz-level").value = "00";
+    renderQuiz();
+  }
   function renderQuiz() {
     const mode = $("#quiz-level").value;
     const exam = mode === "exam";
@@ -302,6 +387,9 @@
 
   // --- cheat sheet ------------------------------------------------------------------
 
+  // The cheat sheet is drawn after the first screen, or when its tab opens.
+  let cheatsDrawn = false;
+  function drawCheats() { if (!cheatsDrawn) { cheatsDrawn = true; renderCheats(); } }
   function renderCheats() {
     const q = $("#cheat-q").value.trim().toLowerCase();
     const titles = scenarioTitles();
@@ -331,10 +419,10 @@
   const go = (hash) => { location.hash = hash; };
   function actions() {
     return [
-      { label: "Playground", kind: "Section", run: () => { go("path"); scrollToEl($("#pg")); } },
+      { label: "Playground", kind: "Section", run: () => { need("play"); go("path"); scrollToEl($("#pg")); } },
       { label: "Your path", kind: "Section", run: () => { go("path"); scrollToEl($("#levels-title")); } },
       ...TABS.slice(1).map((t) => ({ label: t === "fix" ? "Fix: troubleshoot an error" : $(`.top nav a[data-tab="${t}"]`).textContent, kind: "Section", run: () => go(t) })),
-      ...(window.PYPlayground ? window.PYPlayground.scenarios : []).map((s) => ({ label: s.title, hint: s.group, kind: "Scenario", run: () => go("play/" + s.id) })),
+      ...SCENARIOS.map((s) => ({ label: s.title, hint: s.group, kind: "Scenario", run: () => go("play/" + s.id) })),
       ...Q.doctor.map((d) => ({ label: d.title, hint: d.error, kind: "Error", run: () => go("fix/" + d.id) })),
       ...Q.levels.map((l) => ({ label: `${l.id} · ${l.title}`, hint: l.topic, kind: "Level", run: () => go("path/" + l.id) }))
     ];
@@ -348,7 +436,7 @@
     if (!pItems.length) pList.append(h("li.pal-empty", null, "Nothing matches. Try timeout, venv or KeyError."));
     pInput.setAttribute("aria-activedescendant", pItems.length ? "pal-" + pActive : "");
   }
-  function openPalette() { if (palette.open) return; pInput.value = ""; pActive = 0; renderPalette(); palette.showModal(); pInput.focus(); }
+  function openPalette() { if (palette.open) return; need("play"); pInput.value = ""; pActive = 0; renderPalette(); palette.showModal(); pInput.focus(); }
   function choose(i) { const a = pItems[i]; if (!a) return; palette.close(); a.run(); }
   pInput.addEventListener("input", () => { pActive = 0; renderPalette(); });
   pInput.addEventListener("keydown", (e) => {
@@ -374,14 +462,12 @@
     try { for (const k of Object.keys(localStorage)) if (k.startsWith("dq-python:")) localStorage.removeItem(k); } catch { /* storage blocked */ }
     location.reload();
   });
-  $("#quiz-level").append(h("option", { value: "exam" }, "Exam: 15 random questions from every level"),
-    ...Q.levels.map((l) => h("option", { value: l.id }, `${l.id} · ${l.topic} (${window.TRACK_QUIZ[l.id].length} questions)`)));
-  $("#quiz-level").value = "00";
+  const INIT = { quiz: initQuiz };
   $("#quiz-level").addEventListener("change", renderQuiz);
-  $("#xray-go").addEventListener("click", explainPasted);
-  $("#xray-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) explainPasted(); });
+  $("#xray-go").addEventListener("click", () => need("xray").then(explainPasted));
+  $("#xray-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) need("xray").then(explainPasted); });
   $("#xray-clear").addEventListener("click", () => { $("#xray-input").value = ""; $("#xray-result").hidden = true; $("#xray-error").hidden = true; $("#xray-input").focus(); });
-  $("#xray-examples").replaceChildren(...Q.xrayExamples.map((x) => h("button.pill.small-pill", { type: "button", onclick: () => { $("#xray-input").value = x.text; explainPasted(); } }, x.name)));
+  $("#xray-examples").replaceChildren(...Q.xrayExamples.map((x) => h("button.pill.small-pill", { type: "button", onclick: () => { $("#xray-input").value = x.text; need("xray").then(explainPasted); } }, x.name)));
   $("#fix-q").addEventListener("input", renderFixList);
   // The home page's "Something broken?" box hands the pasted error to Troubleshoot.
   // Search once route() has shown the tab, since visiting #fix clears the answer.
@@ -394,17 +480,17 @@
   $("#door-q").addEventListener("keydown", (e) => { if (e.key === "Enter") doorGo(); });
   $("#cheat-q").addEventListener("input", renderCheats);
 
-  renderStage();
-  renderScripts();
-  renderQuiz();
-  route();
-  // Scenario titles come from the playground, which loads after this script.
+  // The first screen in one pass, as soon as the critical scripts have run; then the rest.
   window.addEventListener("DOMContentLoaded", () => {
+    const first = SCENARIOS.find((s) => decodeURIComponent(location.hash) === "#play/" + s.id) || SCENARIOS[0];
+    renderStage();
     renderHome();
     renderPath();
+    window.PYEngage.render();
+    renderPicker(first.id);
+    renderBrief(first);
     renderFixList();
-    renderCheats();
-    current = null;
     route();
+    (window.requestIdleCallback || ((fn) => setTimeout(fn, 200)))(() => { drawCheats(); drawScripts(); for (const name of Object.keys(FEATURES)) need(name).catch(() => { /* retried on first use */ }); });
   });
 })();
