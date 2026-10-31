@@ -1,4 +1,4 @@
-// The Python arch tab: how a script runs, from the shell to system calls.
+// The "How Python runs" tab: how a script runs, from the shell to system calls.
 // Every component can be pointed at, tapped or reached with Tab.
 "use strict";
 
