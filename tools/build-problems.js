@@ -14,16 +14,18 @@ function render() {
   const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const rich = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
   const byId = Object.fromEntries(Q.doctor.map((d) => [d.id, d]));
+  const levels = Object.fromEntries(Q.levels.map((l) => [l.id, l.title]));
   const toc = Q.doctorGroups.map(([group, ids]) => `      <h2>${esc(group)}</h2>\n      <ul>\n${ids.map((id) => `        <li><a href="#${id}">${esc(byId[id].title)}</a></li>`).join("\n")}\n      </ul>`).join("\n");
   const entries = Q.doctorGroups.flatMap(([, ids]) => ids).map((id) => {
     const d = byId[id];
     const practise = d.scenarios.filter((s) => titles[s]).map((s) => `<a href="index.html#play/${s}">${esc(titles[s])}</a>`).join(", ");
+    const level = `<a href="index.html#path/${d.level}">Level ${d.level} · ${esc(levels[d.level])}</a>`;
     return `    <section class="card fix" id="${d.id}">
       <h2>${esc(d.title)}</h2>
       <pre class="err-text"><code>${esc(d.error)}</code></pre>
       <h3>Symptom</h3>
       <p>${rich(d.symptom)}</p>
-      <h3>Cause</h3>
+      <h3>Why it happens</h3>
       <ul>
 ${d.cause.map((c) => `        <li>${rich(c)}</li>`).join("\n")}
       </ul>
@@ -33,7 +35,8 @@ ${d.cause.map((c) => `        <li>${rich(c)}</li>`).join("\n")}
       <p>${rich(d.fix)}</p>
       <h3>Prevent</h3>
       <p>${rich(d.prevent)}</p>
-${practise ? `      <p>Practise it: ${practise}. Interactive version: <a href="index.html#fix/${d.id}">#fix/${d.id}</a>.</p>\n` : `      <p>Interactive version: <a href="index.html#fix/${d.id}">#fix/${d.id}</a>.</p>\n`}    </section>`;
+      <p><strong>Now learn it:</strong> ${practise ? `break and fix it yourself in ${practise}, then take ${level}` : `take ${level}`}. Interactive version: <a href="index.html#fix/${d.id}">#fix/${d.id}</a>.</p>
+    </section>`;
   }).join("\n");
   return `<!doctype html>
 <html lang="en">
@@ -55,7 +58,7 @@ ${practise ? `      <p>Practise it: ${practise}. Interactive version: <a href="i
   <main class="wrap problems">
     <p><a href="index.html">Python for DevOps</a></p>
     <h1>Python errors and fixes for DevOps</h1>
-    <p class="lede">${Q.doctor.length} errors that automation scripts meet, each with the exact message, the cause, how to confirm it, the fix and how to prevent it. Generated from the site's troubleshooting reference.</p>
+    <p class="lede">${Q.doctor.length} errors that automation scripts meet, each with the exact message, why it happens, how to confirm it, the fix and how to prevent it. Then learn it for good: break and fix each one yourself in the <a href="index.html#pg">browser playground</a>. Generated from the site's troubleshooting reference.</p>
     <nav class="card" aria-label="Problems">
 ${toc}
     </nav>

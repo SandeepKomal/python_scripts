@@ -23,13 +23,19 @@
         Python for DevOps
       </a>
       <nav aria-label="Sections">
-        <a href="#path" data-tab="path">Path</a>
-        <a href="#scripts" data-tab="scripts">Scripts</a>
-        <a href="#quiz" data-tab="quiz">Quiz</a>
-        <a href="#xray" data-tab="xray">Script X-ray</a>
-        <a href="#fix" data-tab="fix">Troubleshoot</a>
-        <a href="#cheats" data-tab="cheats">Cheat sheet</a>
-        <a href="#arch" data-tab="arch">How Python runs</a>
+        <div class="mode learn" role="group" aria-label="Learn">
+          <span class="mode-k">Learn</span>
+          <a href="#path" data-tab="path">Path</a>
+          <a href="#scripts" data-tab="scripts">Scripts</a>
+          <a href="#quiz" data-tab="quiz">Quiz</a>
+          <a href="#xray" data-tab="xray">Script X-ray</a>
+          <a href="#arch" data-tab="arch">How Python runs</a>
+        </div>
+        <div class="mode fix" role="group" aria-label="Fix">
+          <span class="mode-k">Fix</span>
+          <a href="#fix" data-tab="fix">Troubleshoot</a>
+          <a href="#cheats" data-tab="cheats">Cheat sheet</a>
+        </div>
       </nav>
       <button type="button" class="kbd-btn" id="palette-open" aria-label="Search the site (Ctrl+K)"><span>Search</span><kbd id="palette-key">Ctrl K</kbd></button>
       <a class="gh" id="gh-link" href="https://github.com/SandeepKomal/python_scripts">GitHub</a>
@@ -43,9 +49,22 @@
           <p class="eyebrow">Python for DevOps</p>
           <h1>Automate the boring.<br>Safely.</h1>
           <p class="sub">Logs, APIs, files and alerts with the standard library: scripts that do not hang, leak secrets or fail silently.</p>
-          <div class="actions">
-            <a class="btn" href="#levels-title" id="cta-path">Start the path</a>
-            <a class="link" href="#play/indent" id="cta-play">Try a scenario</a>
+          <div class="doors">
+            <div class="door learn">
+              <p class="door-k">Learning Python?</p>
+              <h2>Start from zero, step by step.</h2>
+              <p>Levels in order, each with a broken script to fix in your browser.</p>
+              <div class="actions">
+                <a class="btn" href="#levels-title" id="cta-path">Start the path</a>
+                <a class="link" href="#play/indent" id="cta-play">Try a scenario</a>
+              </div>
+            </div>
+            <div class="door fix">
+              <p class="door-k">Something broken right now?</p>
+              <h2>Paste the error, get the fix.</h2>
+              <p>The cause, the commands to confirm it and the fix, for every common Python error in automation.</p>
+              <div class="door-search"><input id="door-q" type="search" placeholder="Paste an error, e.g. externally-managed-environment" aria-label="Paste an error" autocomplete="off"><button type="button" class="pill" id="door-go">Find the fix</button></div>
+            </div>
           </div>
           <div class="stage" id="stage" aria-label="A live log analysis, as log_analyzer.py reports it"></div>
           <div class="stats" id="stats"></div>
@@ -158,8 +177,9 @@
     </section>
 
     <section id="tab-fix" class="tab wrap" hidden>
-      <h2>Troubleshooting reference</h2>
-      <p class="lede">Paste an error message or a whole traceback, or pick a symptom. Each answer gives the cause, how to confirm it, the fix, how to prevent it, and a scenario to practise. Every entry has its own link.</p>
+      <p class="mode-banner"><strong>Fix mode.</strong> For when something is broken right now. Learning Python instead? <a href="#path">Start the path</a>.</p>
+      <h2>Stuck on an error?</h2>
+      <p class="lede">Paste an error message or a whole traceback, or pick a symptom. Each answer explains why it happens, how to confirm it and how to fix and prevent it, then gives you a safe scenario to break and fix it yourself, so you recognise it next time. Every entry has its own link.</p>
       <label class="field wide">Search errors and symptoms
         <input id="fix-q" type="search" placeholder="Paste an error, e.g. externally-managed-environment" autocomplete="off">
       </label>

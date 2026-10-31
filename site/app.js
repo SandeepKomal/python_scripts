@@ -47,7 +47,7 @@
   const practiseChips = (ids) => {
     const titles = scenarioTitles();
     const list = (ids || []).filter((id) => titles[id]);
-    return list.length ? h("div.chips", null, h("span.muted.small", null, "Practise it:"), list.map((id) => h("a.chip", { href: "#play/" + id }, titles[id]))) : null;
+    return list.length ? h("div.chips", null, h("span.muted.small", null, "Practise:"), list.map((id) => h("a.chip", { href: "#play/" + id }, titles[id]))) : null;
   };
 
   // --- tabs and links -----------------------------------------------------------
@@ -110,12 +110,12 @@
       .map(([b, s]) => h("div", null, h("b", null, b), h("span", null, s))));
     const tiles = [
       ["#play/indent", "Playground", "Fix real scripts, here.", `${n} incidents: hangs, injection, cron, pip, secrets, the GIL.`, "wide"],
-      ["#fix", "Troubleshoot", "From error to fix.", `Paste a traceback. ${Q.doctor.length} errors, each with cause, fix and prevention.`, "wide"],
+      ["#cheats", "Cheat sheet", "subprocess, pathlib, venv.", "Recipes with a scenario to try each one.", "wide"],
       ["#xray", "Script X-ray", "Every line, explained.", "Risky patterns flagged."],
       ["#scripts", "Scripts", "Nine, tested.", "Logs, health, certs, secrets."],
       ["#quiz", "Quiz", "Know why.", `${Object.values(window.QUEST_QUIZ).flat().length} questions.`],
-      ["#cheats", "Cheat sheet", "subprocess, pathlib, venv.", "Recipes with a scenario to try each one.", "wide"],
-      ["#arch", "How Python runs", "Interpreter to system calls.", "Venvs, pip, the GIL, threads, processes, asyncio.", "wide"]
+      ["#arch", "How Python runs", "Interpreter to system calls.", "Venvs, pip, the GIL, threads, processes, asyncio.", "wide"],
+      ["#fix", "Stuck on an error?", "Learn why it happens, then practise the fix.", `Paste a traceback. ${Q.doctor.length} errors, each with cause, fix and prevention.`, "wide"]
     ];
     $("#bento").replaceChildren(...tiles.map(([href, k, title, text, size]) => h("a.tile" + (size ? "." + size : ""), { href },
       h("div", null, h("div.k", null, k), h("h3", null, title)), h("p", null, text))));
@@ -277,16 +277,21 @@
     const d = fixById(id);
     if (!d) { $("#fix-out").replaceChildren(); return; }
     const copy = h("button.copy", { type: "button", onclick: (e) => copyLink(e.currentTarget, "fix/" + d.id) }, "Copy link");
+    const chips = practiseChips(d.scenarios);
     $("#fix-out").replaceChildren(h("article.card.fix", { id: "fix-" + d.id },
       h("div.pg-brief-top", null, h("h3", null, d.title), copy),
       h("pre.err-text", null, h("code", null, d.error)),
       h("h4", null, "Symptom"), h("p", null, d.symptom),
-      h("h4", null, "Cause"), h("ul", null, d.cause.map((c) => h("li", null, ...rich(c)))),
+      h("h4", null, "Why it happens"), h("ul", null, d.cause.map((c) => h("li", null, ...rich(c)))),
       h("h4", null, "Confirm"), h("pre", null, h("code", null, d.confirm.join("\n"))),
       h("h4", null, "Fix"), h("p", null, ...rich(d.fix)),
       h("h4", null, "Prevent"), h("p", null, ...rich(d.prevent)),
-      practiseChips(d.scenarios),
-      h("p.note", null, "Level: ", h("a", { href: "#path/" + d.level }, `${d.level} · ${Q.levels.find((l) => l.id === d.level).title}`))));
+      // Fixing is the way in; the point is to learn it, so every answer ends in practice.
+      h("div.learn-it", null,
+        h("h4", null, "Now learn it"),
+        chips && h("p", null, "Break this yourself in a safe playground and fix it. Doing it once is what makes you recognise it next time."),
+        chips,
+        h("p.note", null, chips ? "Then the level that teaches it: " : "The level that teaches it: ", h("a", { href: "#path/" + d.level }, `Level ${d.level} · ${Q.levels.find((l) => l.id === d.level).title}`)))));
     if (scroll) scrollToEl($("#fix-out"));
   }
 
@@ -323,7 +328,7 @@
     return [
       { label: "Playground", kind: "Section", run: () => { go("path"); scrollToEl($("#pg")); } },
       { label: "Your path", kind: "Section", run: () => { go("path"); scrollToEl($("#levels-title")); } },
-      ...TABS.slice(1).map((t) => ({ label: $(`.top nav a[data-tab="${t}"]`).textContent, kind: "Section", run: () => go(t) })),
+      ...TABS.slice(1).map((t) => ({ label: t === "fix" ? "Fix: troubleshoot an error" : $(`.top nav a[data-tab="${t}"]`).textContent, kind: "Section", run: () => go(t) })),
       ...(window.PYPlayground ? window.PYPlayground.scenarios : []).map((s) => ({ label: s.title, hint: s.group, kind: "Scenario", run: () => go("play/" + s.id) })),
       ...Q.doctor.map((d) => ({ label: d.title, hint: d.error, kind: "Error", run: () => go("fix/" + d.id) })),
       ...Q.levels.map((l) => ({ label: `${l.id} · ${l.title}`, hint: l.topic, kind: "Level", run: () => go("path/" + l.id) }))
@@ -373,6 +378,15 @@
   $("#xray-clear").addEventListener("click", () => { $("#xray-input").value = ""; $("#xray-result").hidden = true; $("#xray-error").hidden = true; $("#xray-input").focus(); });
   $("#xray-examples").replaceChildren(...Q.xrayExamples.map((x) => h("button.pill.small-pill", { type: "button", onclick: () => { $("#xray-input").value = x.text; explainPasted(); } }, x.name)));
   $("#fix-q").addEventListener("input", renderFixList);
+  // The home page's "Something broken?" box hands the pasted error to Troubleshoot.
+  // Search once route() has shown the tab, since visiting #fix clears the answer.
+  const doorGo = () => {
+    $("#fix-q").value = $("#door-q").value;
+    window.addEventListener("hashchange", () => { renderFixList(); $("#fix-q").focus(); }, { once: true });
+    go("fix");
+  };
+  $("#door-go").addEventListener("click", doorGo);
+  $("#door-q").addEventListener("keydown", (e) => { if (e.key === "Enter") doorGo(); });
   $("#cheat-q").addEventListener("input", renderCheats);
 
   renderStage();
