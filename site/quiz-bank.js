@@ -1,6 +1,6 @@
 // Quiz questions per level: q, options, answer (index), why. Plain data.
 "use strict";
-window.QUEST_QUIZ = {
+window.TRACK_QUIZ = {
   "00": [
     { q: "A cron job runs `python3 /opt/app/run.py` and fails with ModuleNotFoundError, though the package is installed in /opt/app/.venv. What is the fix?", options: ["Add `source /opt/app/.venv/bin/activate` to the crontab line", "Run `/opt/app/.venv/bin/python /opt/app/run.py`", "pip install the package with sudo", "Set PYTHONPATH to /opt/app"], answer: 1, why: "A venv is used by running its own interpreter. cron runs /bin/sh, which has no `source`, and installing into the system Python is refused on PEP 668 systems." },
     { q: "What does `python3 -m http.server` do differently from running a file?", options: ["It compiles the module first", "It runs a module found on sys.path as the main program", "It runs it in a venv", "It runs it with the GIL disabled"], answer: 1, why: "`-m` finds the module by import name and runs it as __main__. `python3 -m pip` uses this to guarantee pip belongs to that interpreter." },

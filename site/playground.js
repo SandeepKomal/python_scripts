@@ -387,7 +387,7 @@
     $("pg-story").textContent = scenario.story;
     $("pg-goal").textContent = "Goal: " + scenario.goal;
     $("pg-goal").className = "pg-goal";
-    $("pg-level").textContent = `Level ${scenario.level} · ${(root.QUEST.levels.find((l) => l.id === scenario.level) || {}).title || ""}`;
+    $("pg-level").textContent = `Level ${scenario.level} · ${(root.TRACK.levels.find((l) => l.id === scenario.level) || {}).title || ""}`;
     $("pg-level").href = "#path/" + scenario.level;
     $("pg-real").textContent = scenario.real.join("\n");
     $("pg-hint").replaceChildren();
@@ -411,6 +411,7 @@
     if (won(state) && !solved) {
       solved = true;
       store.set("solved", [...new Set([...store.get("solved", []), scenario.id])]);
+      document.dispatchEvent(new CustomEvent("dq:solved", { detail: scenario.id }));
       renderPicker(true);
       $("pg-goal").textContent = "Fixed. " + scenario.lesson;
       $("pg-goal").className = "pg-goal done";
@@ -470,7 +471,7 @@
   $("pg-copy").addEventListener("click", (e) => root.PYUI.copyLink(e.currentTarget, "play/" + scenario.id));
 
   root.PYPlayground = {
-    scenarios: SCENARIOS.map((s) => ({ id: s.id, title: s.title, group: s.group })),
+    scenarios: SCENARIOS.map((s) => ({ id: s.id, title: s.title, group: s.group, story: s.story, level: s.level })),
     current: () => scenario.id,
     load: (id) => { if (id !== scenario.id || !editor.value) load(id, true); }
   };

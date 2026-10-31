@@ -4,7 +4,7 @@
 
 (function () {
   const { h, rich } = window.PYUI;
-  const A = window.QUEST.architecture;
+  const A = window.TRACK.architecture;
   const parts = Object.fromEntries(A.components.map((c) => [c.id, c]));
   const NS = "http://www.w3.org/2000/svg";
   const s = (tag, attrs, ...kids) => {

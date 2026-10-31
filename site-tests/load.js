@@ -3,4 +3,4 @@
 const path = require("path");
 global.window = globalThis;
 for (const f of ["data.js", "quiz-bank.js", "scenarios.js", "playground.js", "xray.js"]) require(path.resolve(__dirname, "../site", f));
-module.exports = { Q: window.QUEST, quiz: window.QUEST_QUIZ, sim: window.PYSim, xray: window.PYXray };
+module.exports = { Q: window.TRACK, quiz: window.TRACK_QUIZ, sim: window.PYSim, xray: window.PYXray };

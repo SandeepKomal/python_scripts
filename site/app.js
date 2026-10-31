@@ -1,8 +1,8 @@
-// Python for DevOps site. No dependencies, no network requests.
+// DevOps Nimbus Python for DevOps site. No dependencies, no network requests.
 "use strict";
 
 (function () {
-  const Q = window.QUEST;
+  const Q = window.TRACK;
   const $ = (sel) => document.querySelector(sel);
   const still = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
   const scrollToEl = (el) => el && el.scrollIntoView({ block: "start", behavior: still() ? "auto" : "smooth" });
@@ -70,7 +70,7 @@
     if (want === "play" && sub && window.PYPlayground) { window.PYPlayground.load(sub); scrollToEl($("#pg")); }
     if (want === "path" && sub) scrollToEl(document.getElementById("lv-" + sub));
     if (want === "fix") showFix(sub, Boolean(sub));
-    document.title = want === "fix" && sub && fixById(sub) ? `${fixById(sub).title} · Python for DevOps` : "Python for DevOps";
+    document.title = want === "fix" && sub && fixById(sub) ? `${fixById(sub).title} · Python for DevOps` : "Python for DevOps · DevOps Nimbus";
   }
   window.addEventListener("hashchange", route);
 
@@ -113,7 +113,7 @@
       ["#cheats", "Cheat sheet", "subprocess, pathlib, venv.", "Recipes with a scenario to try each one.", "wide"],
       ["#xray", "Script X-ray", "Every line, explained.", "Risky patterns flagged."],
       ["#scripts", "Scripts", "Nine, tested.", "Logs, health, certs, secrets."],
-      ["#quiz", "Quiz", "Know why.", `${Object.values(window.QUEST_QUIZ).flat().length} questions.`],
+      ["#quiz", "Quiz", "Know why.", `${Object.values(window.TRACK_QUIZ).flat().length} questions.`],
       ["#arch", "How Python runs", "Interpreter to system calls.", "Venvs, pip, the GIL, threads, processes, asyncio.", "wide"],
       ["#fix", "Stuck on an error?", "Learn why it happens, then practise the fix.", `Paste a traceback. ${Q.doctor.length} errors, each with cause, fix and prevention.`, "wide"]
     ];
@@ -142,6 +142,7 @@
         h("input", { type: "checkbox", checked: isDone, "aria-label": `Mark level ${lv.id} complete`, onchange: (e) => {
           if (e.target.checked) done.add(lv.id); else done.delete(lv.id);
           store.set("done", [...done]);
+          if (e.target.checked) window.PYEngage.active();
           renderPath();
         } }),
         h("div.level-body", null,
@@ -175,14 +176,14 @@
   function renderQuiz() {
     const mode = $("#quiz-level").value;
     const exam = mode === "exam";
-    const items = exam ? shuffle(Q.levels.flatMap((l) => window.QUEST_QUIZ[l.id].map((q) => ({ ...q, level: l.id })))).slice(0, 15) : window.QUEST_QUIZ[mode].map((q) => ({ ...q, level: mode }));
+    const items = exam ? shuffle(Q.levels.flatMap((l) => window.TRACK_QUIZ[l.id].map((q) => ({ ...q, level: l.id })))).slice(0, 15) : window.TRACK_QUIZ[mode].map((q) => ({ ...q, level: mode }));
     let answered = 0, correct = 0;
     const score = h("div.score", { "aria-live": "polite" });
     const update = () => {
       score.replaceChildren(h("span", null, h("strong", null, String(correct)), ` correct of ${answered} answered · ${items.length} questions`));
       if (answered === items.length) {
         const pct = Math.round(correct / items.length * 100);
-        if (!exam) { const all = quizScores(); all[mode] = Math.max(all[mode] || 0, pct); store.set("quiz", all); renderPath(); }
+        if (!exam) { const all = quizScores(); all[mode] = Math.max(all[mode] || 0, pct); store.set("quiz", all); window.PYEngage.active(); renderPath(); }
         score.append(h("p.result", null, h("strong", null, `${pct}%. `), pct === 100 ? "Perfect." : "Read the explanations, practise the scenarios, try again. ",
           h("button.link-btn", { type: "button", onclick: renderQuiz }, exam ? "New exam" : "Try again")));
       }
@@ -370,7 +371,7 @@
     location.reload();
   });
   $("#quiz-level").append(h("option", { value: "exam" }, "Exam: 15 random questions from every level"),
-    ...Q.levels.map((l) => h("option", { value: l.id }, `${l.id} · ${l.topic} (${window.QUEST_QUIZ[l.id].length} questions)`)));
+    ...Q.levels.map((l) => h("option", { value: l.id }, `${l.id} · ${l.topic} (${window.TRACK_QUIZ[l.id].length} questions)`)));
   $("#quiz-level").value = "00";
   $("#quiz-level").addEventListener("change", renderQuiz);
   $("#xray-go").addEventListener("click", explainPasted);
