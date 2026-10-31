@@ -115,7 +115,7 @@
       ["#scripts", "Scripts", "Nine, tested.", "Logs, health, certs, secrets."],
       ["#quiz", "Quiz", "Know why.", `${Object.values(window.QUEST_QUIZ).flat().length} questions.`],
       ["#cheats", "Cheat sheet", "subprocess, pathlib, venv.", "Recipes with a scenario to try each one.", "wide"],
-      ["#arch", "Python arch", "Interpreter to system calls.", "Venvs, pip, the GIL, threads, processes, asyncio.", "wide"]
+      ["#arch", "How Python runs", "Interpreter to system calls.", "Venvs, pip, the GIL, threads, processes, asyncio.", "wide"]
     ];
     $("#bento").replaceChildren(...tiles.map(([href, k, title, text, size]) => h("a.tile" + (size ? "." + size : ""), { href },
       h("div", null, h("div.k", null, k), h("h3", null, title)), h("p", null, text))));
